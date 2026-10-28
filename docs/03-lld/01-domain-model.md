@@ -129,7 +129,7 @@ Each rule is one small pure function in `domain/` with its own test file.
 | `apply_verdict(incident, result) -> Incident` | Returns a new incident with status `TRIAGED` or `CLOSED` |
 | `approval_requirement(kind, severity)` | Catalogue above |
 | `record_decision(approval, decision) -> Approval` | Appends a decision; computes the new status |
-| `next_status(current, event) -> IncidentStatus` | Explicit state machine; illegal transitions raise `InvalidTransition` |
+| `next_status(current, event) -> IncidentStatus` | Explicit state machine; illegal transitions raise `InvalidTransitionError` |
 
 ### Severity scoring
 
@@ -165,14 +165,15 @@ One hierarchy, rooted in `SentinelFlowError`:
 ```
 SentinelFlowError
 ├── DomainError
-│   ├── InvalidTransition
-│   └── UnknownAction
+│   ├── InvalidValueError       (value object invariant broken)
+│   ├── InvalidTransitionError
+│   └── UnknownActionError
 ├── AuthorizationError      (→ HTTP 403)
-│   └── PolicyDenied(reason)
+│   └── PolicyDeniedError(reason)
 ├── NotFoundError           (→ HTTP 404)
 ├── ConflictError           (→ HTTP 409, e.g. approval already decided)
 └── ProviderError           (third-party failures, retryable flag)
-    └── BudgetExceeded
+    └── BudgetExceededError
 ```
 
 Providers translate third-party exceptions into `ProviderError` at their boundary;
