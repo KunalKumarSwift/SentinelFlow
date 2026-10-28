@@ -8,6 +8,20 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel
+          POSTGRES_DB: sentinelflow
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sentinel" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      # Runs every repository contract test against Postgres as well as memory.
+      TEST_DATABASE_URL: postgresql://sentinel:sentinel@localhost:5432/sentinelflow
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

@@ -1,17 +1,26 @@
-"""Contracts for alert and incident repositories (memory now, Postgres in Phase 2)."""
+"""Contracts for alert and incident repositories (memory and Postgres)."""
 
 from collections.abc import Callable
 
 import pytest
 
 from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository, StoredAlert
-from sentinelflow.domain.incidents import IncidentStatus
+from sentinelflow.domain.incidents import IncidentStatus, Verdict
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
 from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
+from sentinelflow.providers.storage.postgres.pg_alerts import PgAlertRepository
+from sentinelflow.providers.storage.postgres.pg_incidents import PgIncidentRepository
 from tests.builders import T0, an_alert, an_incident
+from tests.contracts.pg import fresh_pool
 
-ALERT_REPOS: list[Callable[[], AlertRepository]] = [MemoryAlertRepository]
-INCIDENT_REPOS: list[Callable[[], IncidentRepository]] = [MemoryIncidentRepository]
+ALERT_REPOS: list[Callable[[], AlertRepository]] = [
+    MemoryAlertRepository,
+    lambda: PgAlertRepository(fresh_pool()),
+]
+INCIDENT_REPOS: list[Callable[[], IncidentRepository]] = [
+    MemoryIncidentRepository,
+    lambda: PgIncidentRepository(fresh_pool()),
+]
 
 
 @pytest.fixture(params=ALERT_REPOS)
@@ -72,3 +81,15 @@ def test_list_returns_only_tenant_incidents_oldest_first(incidents: IncidentRepo
     incidents.add(an_incident(id="inc-1"))
     incidents.add(an_incident(id="inc-3", tenant_id="globex"))
     assert [i.id for i in incidents.list("acme")] == ["inc-1", "inc-2"]
+
+
+def test_incident_round_trip_preserves_every_field(incidents: IncidentRepository) -> None:
+    incident = an_incident(verdict=Verdict.TRUE_POSITIVE, alert_ids=("alt-1", "alt-2"))
+    incidents.add(incident)
+    assert incidents.get("acme", "inc-0001") == incident
+
+
+def test_alert_round_trip_preserves_every_field(alerts: AlertRepository) -> None:
+    stored = StoredAlert(an_alert(raw={"user_agent": "curl/8"}), "fp-1", "inc-9")
+    alerts.add(stored)
+    assert alerts.get("acme", "alt-0001") == stored

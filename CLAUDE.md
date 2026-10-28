@@ -22,7 +22,7 @@ SentinelFlow: agentic security-incident orchestration with LangGraph. Design doc
 
 ```bash
 uv sync
-uv run pytest -m "not e2e"
+uv run pytest -m "not e2e"   # set TEST_DATABASE_URL to also run the Postgres contract tests
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run lint-imports
