@@ -24,7 +24,8 @@ def principal_from_token(token: str, verifier: TokenVerifier) -> Principal:
 
 ## 2. Permissions
 
-Permissions are strings `resource:verb[:qualifier]`, defined once in `security/permissions.py`.
+Permissions are strings `resource:verb[:qualifier]`, defined once as the `Permission` StrEnum in
+`security/permissions.py` (a typo is a type error, not a silent deny).
 
 | Permission | Meaning |
 |---|---|
@@ -58,13 +59,15 @@ Permissions are strings `resource:verb[:qualifier]`, defined once in `security/p
 | action:approve:low/medium | | | ✅ | ✅ | | | | | |
 | action:approve:high | | | | ✅ | | | | | |
 | action:execute | | | | | | | | ✅ | |
+| intel:lookup, identity:read, events:read | | | | | | | | ✅ | |
 | audit:read / verify | | | | | | ✅ | | | ✅ |
 | workflow:publish, integration:manage | | | | | ✅ | | | | |
 | tenant:admin | | | | | | | | | ✅ |
 
-The table is data (`ROLE_PERMISSIONS: Mapping[str, frozenset[str]]`). The security
-test-suite is generated from the same table, so a change to the matrix that is not
-reflected in tests fails CI.
+The table is data (`ROLE_PERMISSIONS: Mapping[str, frozenset[Permission]]` in
+`security/roles.py`). The tests keep an **independent** copy of this matrix
+(`tests/unit/security/rbac_spec.py`) and check every role × permission pair against the code.
+If both came from one table, a wrong grant could never fail a test.
 
 Note: no human role holds `action:execute`. Humans approve; only the orchestrator
 executes — and only approved actions.
