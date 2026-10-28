@@ -157,9 +157,22 @@ decisions — the resume payload is only a trigger, never trusted for the decisi
 | `write_report` | LLM narrative (`report.write`, facts passed as untrusted data) **followed by** the verified facts; on `ProviderError` the facts alone |
 | ticket | `TicketingProvider.upsert(tenant, incident, title, body)`; readable via `GET /v1/incidents/{id}/report` |
 
-## 8. Access review (scheduled)
+## 8. Access review (scheduled) — built, slice 4.4
 
 Runs per tenant on a cron trigger (`orchestrator` principal, read-only scope).
+
+*As built:* `domain/access_review.review_accounts` holds the rules (dormant: no login for
+90 days or never; over-privileged: `incident-commander` / `platform-admin` /
+`security-engineer` unused for 30 days; a dormant account is reported only as dormant).
+`workflows/access_review` is a three-node graph (`list_accounts` → `review` →
+`raise_findings`) over `contracts/accounts.AccountDirectory`. Each finding is ingested as an
+alert (`source="access-review"`); a finding whose user still has an **open** incident from an
+earlier review is skipped, so a daily schedule doesn't pile up duplicates.
+`runtime/access_review_job.AccessReviewJob` queues a lifecycle run per new incident through
+`workflows/run_start.queue_lifecycle_run`, the same code the API uses. Access findings have
+no automatic playbook, so they end `escalated` for an analyst. Entry point:
+`sentinelflow-access-review` (one pass over `ACCESS_REVIEW_TENANTS`, then exit; schedule it
+with cron or a Kubernetes CronJob). The directory is the demo one (`simulator/demo_accounts`).
 
 | Node | Does |
 |---|---|

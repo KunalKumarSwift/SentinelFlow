@@ -28,6 +28,7 @@ dependencies = [
 [project.scripts]
 sentinelflow-api = "sentinelflow.bootstrap.serve:main"
 sentinelflow-worker = "sentinelflow.bootstrap.worker_main:main"
+sentinelflow-access-review = "sentinelflow.bootstrap.access_review_main:main"
 sentinelflow-sim = "sentinelflow.simulator.cli:run"
 
 [dependency-groups]

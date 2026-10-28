@@ -33,11 +33,12 @@ from sentinelflow.security.redaction import Redactor
 
 @dataclass(frozen=True, slots=True)
 class Runtime:
-    """The wired application: HTTP container, the worker and this process's metrics."""
+    """The wired application: HTTP container, worker, metrics and the shared stores."""
 
     container: ApiContainer
     worker: Worker
     metrics: PrometheusMetrics
+    stores: Stores
 
 
 def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
@@ -59,7 +60,8 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
         ResumeRunHandler(stores.runs, graph, stores.clock),
     )
     worker = Worker(stores.queue, handler, "worker-1", metrics=metrics, tracer=tracer)
-    return Runtime(build_container(settings, stores, redactor, metrics), worker, metrics)
+    container = build_container(settings, stores, redactor, metrics)
+    return Runtime(container, worker, metrics, stores)
 
 
 def _budgeted_llm(settings: Settings, stores: Stores, metrics: PrometheusMetrics) -> BudgetedLLM:
