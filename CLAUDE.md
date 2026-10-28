@@ -7,7 +7,7 @@ SentinelFlow: agentic security-incident orchestration with LangGraph. Design doc
 
 - **TDD:** write a failing test first, then the minimum code, then refactor. No code without a test.
 - **Small files:** 50–100 lines per file (CI fails > 120). Functions ≤ 20 lines, ≤ 4 parameters.
-- **Layers:** `core → domain → contracts → security → workflows|providers → api|runtime|simulator → bootstrap`.
+- **Layers:** `core → domain → contracts → security → workflows|providers → facades → api|runtime|simulator → bootstrap`.
   Import only downward; `workflows` never imports `providers` (inject protocols via `deps.py`).
 - **Types:** Python 3.12, full hints, `pyright --strict` clean, no `Any`.
 - **Docs:** Google-style docstrings on every module, public class and function. Comments explain why.

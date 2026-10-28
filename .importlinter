@@ -1,0 +1,17 @@
+[importlinter]
+root_package = sentinelflow
+
+# Layers are listed top (may import everything below) to bottom (imports nothing above).
+# Parentheses mark layers that do not exist yet; they become enforced once created.
+[importlinter:contract:layers]
+name = Layered architecture (see docs/03-lld/00-code-structure.md)
+type = layers
+layers =
+    (sentinelflow.bootstrap)
+    (sentinelflow.api) | (sentinelflow.runtime) | (sentinelflow.simulator)
+    (sentinelflow.facades)
+    (sentinelflow.workflows) | (sentinelflow.providers)
+    (sentinelflow.security)
+    (sentinelflow.contracts)
+    (sentinelflow.domain)
+    (sentinelflow.core)

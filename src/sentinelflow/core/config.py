@@ -1,0 +1,59 @@
+"""Application settings, read from environment variables once at start-up.
+
+This is the only module allowed to read the environment. The composition root calls
+``load_settings()`` and passes the result down; nothing else imports ``os.environ``.
+Defaults run the whole system offline (fake LLM, in-memory storage and queue).
+Use ``uv run --env-file .env ...`` to load a local env file.
+
+Environment:
+    APP_ENV (default: "dev"), JWT_SECRET (required, >= 32 chars),
+    LLM_BACKEND (default: "fake"), LLM_MODEL (default: "qwen2.5:7b"),
+    OLLAMA_URL (default: "http://localhost:11434"), ANTHROPIC_API_KEY,
+    STORAGE_BACKEND (default: "memory"), DATABASE_URL,
+    QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
+    INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000).
+"""
+
+from typing import Literal, Self
+
+from pydantic import Field, SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Validated, immutable application configuration."""
+
+    model_config = SettingsConfigDict(frozen=True)
+
+    app_env: Literal["dev", "test", "prod"] = "dev"
+    jwt_secret: SecretStr = Field(min_length=32)
+    llm_backend: Literal["fake", "ollama", "anthropic"] = "fake"
+    llm_model: str = "qwen2.5:7b"
+    ollama_url: str = "http://localhost:11434"
+    anthropic_api_key: SecretStr | None = None
+    storage_backend: Literal["memory", "postgres"] = "memory"
+    database_url: SecretStr | None = None
+    queue_backend: Literal["memory", "redis"] = "memory"
+    redis_url: str = "redis://localhost:6379/0"
+    intel_backend: Literal["mock", "abuseipdb"] = "mock"
+    tenant_token_budget_daily: int = Field(default=200_000, gt=0)
+
+    @model_validator(mode="after")
+    def _require_backend_credentials(self) -> Self:
+        if self.llm_backend == "anthropic" and self.anthropic_api_key is None:
+            raise ValueError("LLM_BACKEND=anthropic requires ANTHROPIC_API_KEY")
+        if self.storage_backend == "postgres" and self.database_url is None:
+            raise ValueError("STORAGE_BACKEND=postgres requires DATABASE_URL")
+        return self
+
+
+def load_settings() -> Settings:
+    """Read and validate settings from the environment.
+
+    Returns:
+        The validated settings.
+
+    Raises:
+        pydantic.ValidationError: If a value is missing, malformed, or inconsistent.
+    """
+    return Settings()  # pyright: ignore[reportCallIssue] -- fields are filled from env vars
