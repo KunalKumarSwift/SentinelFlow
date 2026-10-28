@@ -34,7 +34,8 @@ it should have been injected.
 
 ## 4. Security test matrix
 
-Security tests are **generated from data** so they cannot drift from the policy:
+Security tests are **generated from an independent spec** of the matrix, so a wrong grant in
+the code fails a test:
 
 ```python
 @pytest.mark.parametrize(("role", "permission", "expected"), rbac_matrix_cases())
