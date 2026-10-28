@@ -111,6 +111,12 @@ to the third party. An IP nobody has reported is `None` ("no intel"). 429, 5xx a
 errors are retryable `ProviderError`s, other failures permanent, and error messages never
 contain the key. Selected by `facades/intel_facade.make_threat_intel`.
 
+**GitHub Issues (built, slice 4.6).** `providers/ticketing/github_ticketing.GitHubTicketing`
+files each report as one issue titled `[tenant/incident] …`, found again through the search
+API (so the provider holds no state) and updated in place. 429/5xx are retryable; the token
+never appears in errors. Search is eventually consistent, so two reports for one incident
+within seconds could open two issues; reports are written once per run, so this is accepted.
+
 ## 4. Facades and configuration
 
 Facades contain switch logic only:
@@ -155,6 +161,8 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `OIDC_JWKS_URL` | `<issuer>/protocol/openid-connect/certs` | Where signing keys are fetched |
 | `POLICY_ENGINE` | `incode` | `opa` asks OPA (Rego in `deploy/opa`) for every decision; fails closed |
 | `OPA_URL` | `http://localhost:8181` | OPA server |
+| `TICKETING_BACKEND` | `store` | `store` (memory/Postgres) or `github` (one issue per incident) |
+| `GITHUB_REPO` / `GITHUB_TOKEN` | — | Repository (`owner/name`) and fine-grained token for `github` ticketing |
 | `ACCESS_REVIEW_TENANTS` | `acme` | Comma-separated tenants `sentinelflow-access-review` reviews |
 
 ## 5. Adding a new provider (checklist)
