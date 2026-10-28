@@ -7,9 +7,10 @@ to domain objects at the edge.
 ## 1. Conventions
 
 - Base path `/v1`. JSON only. UTF-8.
-- Auth: `Authorization: Bearer <JWT>` on every route except health and dev-token.
+- Auth: `Authorization: Bearer <JWT>` on every route except health and dev-token
+  (`api/auth.py::Auth`; Swagger's *Authorize* button works via the HTTP bearer scheme).
 - Each route declares its permission with a dependency:
-  `principal: Principal = Depends(require("incident:read"))`.
+  `principal: Annotated[Principal, Depends(auth.require(Permission.INCIDENT_READ))]`.
 - Resource-level checks (tenant, team, SoD) happen in the service layer via the policy engine.
 - Errors use **RFC 9457 problem details**:
   `{"type": "...", "title": "Forbidden", "status": 403, "detail": "missing permission action:approve:high", "correlation_id": "..."}`
@@ -20,7 +21,7 @@ to domain objects at the edge.
 
 | Method | Path | Permission | Description |
 |---|---|---|---|
-| POST | `/v1/auth/dev-token` | none (dev only) | Issue a JWT for a seeded user |
+| POST | `/v1/auth/dev-token` | none (mounted only when `APP_ENV=dev`; otherwise 404) | Issue a JWT for any identity — local demos only |
 | POST | `/v1/alerts` | `alert:ingest` | Ingest one alert; returns incident id and whether deduplicated |
 | GET | `/v1/incidents` | `incident:read` | List incidents visible to the caller (filters: status, severity) |
 | GET | `/v1/incidents/{id}` | `incident:read` | Incident detail, redacted per role |
@@ -74,15 +75,20 @@ class IncidentOut(BaseModel):
 
 ## 4. Status codes
 
-| Code | When |
-|---|---|
-| 200 / 201 / 202 | OK / created / accepted (async run queued) |
-| 400 | Schema validation failure |
-| 401 | Missing, expired or invalid token |
-| 403 | Policy denied (reason in `detail`) |
-| 404 | Not found **or** not visible to caller (avoid leaking existence across tenants) |
-| 409 | Approval already decided, illegal state transition |
-| 429 | Rate limit or LLM budget exceeded |
+`api/problems.py` is the only place that maps errors to HTTP; business code raises typed
+`SentinelFlowError` subclasses. The first matching class wins:
+
+| Code | Raised as | When |
+|---|---|---|
+| 200 / 201 / 202 | — | OK / created / accepted (async run queued) |
+| 401 (+ `WWW-Authenticate: Bearer`) | `AuthenticationError` | Missing, expired or invalid token |
+| 403 | `AuthorizationError` / `PolicyDeniedError` | Policy denied (reason in `detail`) |
+| 404 | `NotFoundError` | Not found **or** not visible to caller (avoid leaking existence across tenants) |
+| 409 | `InvalidTransitionError` (later `ConflictError`) | Illegal state transition, approval already decided |
+| 422 | Pydantic validation, `DomainError` | Malformed body; invalid value; unknown rule |
+| 429 | (Phase 3) | Rate limit or LLM budget exceeded |
+| 503 | `ProviderError` | An external provider failed |
+| 500 | anything else | Generic `detail: "unexpected error"`; internal messages are never leaked |
 
 ## 5. Approval decision flow (service layer)
 
