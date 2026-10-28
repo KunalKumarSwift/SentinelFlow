@@ -1,0 +1,6 @@
+apiVersion: 1
+providers:
+  - name: sentinelflow
+    folder: SentinelFlow
+    type: file
+    options: { path: /var/lib/grafana/dashboards }

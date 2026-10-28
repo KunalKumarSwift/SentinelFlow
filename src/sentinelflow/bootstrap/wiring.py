@@ -1,4 +1,4 @@
-"""Build the single-process runtime: API container plus one worker sharing the stores.
+"""Build the runtime: API container plus one worker sharing the stores and metrics.
 
 Storage may be memory or PostgreSQL and the queue memory or Redis; intel and identity
 are mocks. Other backends are rejected here so a misconfiguration fails at start-up,
@@ -6,87 +6,62 @@ not mid-run.
 """
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+from prometheus_client import CollectorRegistry
 
 from sentinelflow.api.container import ApiContainer
+from sentinelflow.bootstrap._container import build_container
 from sentinelflow.bootstrap._lifecycle import build_lifecycle
 from sentinelflow.bootstrap._pg_stores import postgres_stores
 from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores, memory_stores
 from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
-from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.llm_facade import make_llm
-from sentinelflow.facades.shared_state_facade import (
-    make_rate_limiter,
-    make_run_queue,
-    make_token_budget,
-)
+from sentinelflow.facades.shared_state_facade import make_run_queue, make_token_budget
 from sentinelflow.providers.llm.budgeted_llm import BudgetedLLM
+from sentinelflow.providers.metrics.counting_audit_store import CountingAuditStore
+from sentinelflow.providers.metrics.prometheus_metrics import PrometheusMetrics
 from sentinelflow.runtime.dispatch import Dispatcher
 from sentinelflow.runtime.resume_handler import ResumeRunHandler
 from sentinelflow.runtime.start_handler import StartRunHandler
 from sentinelflow.runtime.worker import Worker
-from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
-from sentinelflow.security.throttle import Throttle
-from sentinelflow.security.tokens import Hs256TokenService
-from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
-from sentinelflow.workflows.registry import DEFAULT_REGISTRY
-
-DEFAULT_TEAM = "soc-emea"
 
 
 @dataclass(frozen=True, slots=True)
 class Runtime:
-    """The wired application: HTTP container and the worker that drains its queue."""
+    """The wired application: HTTP container, the worker and this process's metrics."""
 
     container: ApiContainer
     worker: Worker
+    metrics: PrometheusMetrics
 
 
 def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
-    """Wire every component for single-process mode.
+    """Wire every component for one process.
 
     Raises:
         ValueError: If settings ask for a backend this phase does not provide.
     """
     _require_supported_backends(settings)
-    stores = _stores(settings)
+    metrics = PrometheusMetrics(CollectorRegistry())
+    stores = _stores(settings, metrics)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
-    graph = build_lifecycle(stores, _budgeted_llm(settings, stores), redactor, demo_seed)
+    llm = _budgeted_llm(settings, stores, metrics)
+    graph = build_lifecycle(stores, llm, redactor, demo_seed)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),
         ResumeRunHandler(stores.runs, graph, stores.clock),
     )
-    worker = Worker(stores.queue, handler, "worker-1")
-    return Runtime(_container(settings, stores, redactor), worker)
+    worker = Worker(stores.queue, handler, "worker-1", metrics=metrics)
+    return Runtime(build_container(settings, stores, redactor, metrics), worker, metrics)
 
 
-def _container(settings: Settings, stores: Stores, redactor: Redactor) -> ApiContainer:
-    ids, secret = UuidIdFactory(), settings.jwt_secret.get_secret_value()
-    deps = IngestionDeps(stores.alerts, stores.incidents, ids, stores.clock, DEFAULT_TEAM)
-    return ApiContainer(
-        app_env=settings.app_env,
-        tokens=Hs256TokenService(secret, stores.clock),
-        ingestion=IngestionService(deps),
-        incidents=stores.incidents,
-        registry=DEFAULT_REGISTRY,
-        queue=stores.queue,
-        runs=stores.runs,
-        approvals=stores.approvals,
-        policy=InCodePolicyEngine(),
-        ids=ids,
-        audit=stores.audit,
-        clock=stores.clock,
-        redactor=redactor,
-        ticketing=stores.ticketing,
-        throttle=Throttle(make_rate_limiter(settings, stores.clock)),
-    )
-
-
-def _budgeted_llm(settings: Settings, stores: Stores) -> BudgetedLLM:
+def _budgeted_llm(settings: Settings, stores: Stores, metrics: PrometheusMetrics) -> BudgetedLLM:
     budget = make_token_budget(settings, stores.clock)
-    return BudgetedLLM(make_llm(settings), budget, settings.tenant_token_budget_daily)
+    limit = settings.tenant_token_budget_daily
+    return BudgetedLLM(make_llm(settings), budget, limit, metrics)
 
 
 def _derive_key(secret: str, purpose: str) -> bytes:
@@ -94,12 +69,15 @@ def _derive_key(secret: str, purpose: str) -> bytes:
     return hashlib.sha256(f"sentinelflow:{purpose}:{secret}".encode()).digest()
 
 
-def _stores(settings: Settings) -> Stores:
+def _stores(settings: Settings, metrics: PrometheusMetrics) -> Stores:
     clock = SystemClock()
     queue = make_run_queue(settings, clock, VISIBILITY_TIMEOUT)
     if settings.database_url is not None and settings.storage_backend == "postgres":
-        return postgres_stores(clock, settings.database_url.get_secret_value(), queue)
-    return memory_stores(clock, queue)
+        stores = postgres_stores(clock, settings.database_url.get_secret_value(), queue)
+    else:
+        stores = memory_stores(clock, queue)
+    # Every audit append (policy denials included) is counted, whoever writes it.
+    return replace(stores, audit=CountingAuditStore(stores.audit, metrics))
 
 
 def _require_supported_backends(settings: Settings) -> None:

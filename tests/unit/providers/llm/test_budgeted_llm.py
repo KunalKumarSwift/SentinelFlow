@@ -10,6 +10,7 @@ from sentinelflow.providers.llm.budgeted_llm import OUTPUT_ALLOWANCE, BudgetedLL
 from tests.builders import T0
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_llm import FakeLLM
+from tests.fakes.fake_metrics import RecordingMetrics
 
 
 class Answer(BaseModel):
@@ -42,3 +43,11 @@ def test_prompt_without_tenant_is_charged_to_an_unattributed_bucket() -> None:
     llm = BudgetedLLM(FakeLLM({"p": {"value": 1}}), budget, estimate_tokens(PROMPT))
     llm.structured(Prompt("p", "S" * 40, "I" * 40, {"x": "U" * 20}), Answer)
     assert not budget.try_spend("unattributed", 1, estimate_tokens(PROMPT))
+
+
+def test_reserved_tokens_are_reported() -> None:
+    metrics = RecordingMetrics()
+    budget = MemoryTokenBudget(FakeClock(T0))
+    llm = BudgetedLLM(FakeLLM({"p": {"value": 1}}), budget, 10_000, metrics)
+    llm.structured(PROMPT, Answer)
+    assert metrics.calls == [("llm_tokens", "acme", estimate_tokens(PROMPT))]

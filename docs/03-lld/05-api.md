@@ -36,7 +36,7 @@ to domain objects at the edge.
 | GET | `/v1/audit/verify` | `audit:verify` | Re-hash the tenant's whole chain → `{ok, first_bad_seq, checked}` ✅ |
 | GET | `/healthz` | none | Liveness |
 | GET | `/readyz` | none | Readiness (DB, queue reachable) |
-| GET | `/metrics` | none (internal network) | Prometheus metrics (Phase 3) |
+| GET | `/metrics` | none (restrict at the network edge) | Prometheus metrics of this API process ✅ |
 
 ## 3. Key schemas
 
