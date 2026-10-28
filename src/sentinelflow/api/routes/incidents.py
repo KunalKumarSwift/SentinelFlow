@@ -8,6 +8,7 @@ from sentinelflow.api.auth import Auth
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.api.schemas.incidents import IncidentOut, IncidentPage
 from sentinelflow.domain.errors import NotFoundError
+from sentinelflow.domain.incidents import Incident
 from sentinelflow.domain.principals import Principal
 from sentinelflow.security.permissions import Permission
 
@@ -21,7 +22,7 @@ def build_incidents_router(container: ApiContainer, auth: Auth) -> APIRouter:
     def list_incidents(principal: Annotated[Principal, Depends(can_read)]) -> IncidentPage:
         """List the caller's tenant's incidents, oldest first."""
         items = container.incidents.list(principal.tenant_id)
-        return IncidentPage(items=[IncidentOut.of(i) for i in items])
+        return IncidentPage(items=[_view(i, principal) for i in items])
 
     @router.get("/{incident_id}")
     def get_incident(
@@ -31,6 +32,11 @@ def build_incidents_router(container: ApiContainer, auth: Auth) -> APIRouter:
         incident = container.incidents.get(principal.tenant_id, incident_id)
         if incident is None:
             raise NotFoundError(f"incident {incident_id} not found")
-        return IncidentOut.of(incident)
+        return _view(incident, principal)
+
+    def _view(incident: Incident, principal: Principal) -> IncidentOut:
+        return IncidentOut.of(
+            incident, container.redactor.entities_for(principal, incident.entities)
+        )
 
     return router

@@ -8,7 +8,7 @@ from sentinelflow.domain.incidents import Incident
 
 
 class IncidentOut(BaseModel):
-    """An incident as shown to API callers (PII redaction arrives in Phase 2)."""
+    """An incident as shown to API callers; ``entities`` is already redacted per role."""
 
     id: str
     status: str
@@ -20,15 +20,15 @@ class IncidentOut(BaseModel):
     created_at: datetime
 
     @classmethod
-    def of(cls, incident: Incident) -> "IncidentOut":
-        """Map a domain incident to its API representation."""
+    def of(cls, incident: Incident, entities: dict[str, str]) -> "IncidentOut":
+        """Map a domain incident, using the caller-appropriate ``entities`` view."""
         return cls(
             id=incident.id,
             status=incident.status.value,
             severity=str(incident.severity),
             verdict=None if incident.verdict is None else incident.verdict.value,
             team=incident.team,
-            entities=incident.entities.present(),
+            entities=entities,
             alert_count=len(incident.alert_ids),
             created_at=incident.created_at,
         )

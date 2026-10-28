@@ -47,7 +47,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 2.4b ✅ | Audit API (`/v1/audit`, `/v1/audit/verify`) + recording API events | auditor-only; tamper → `ok=false` |
 | 2.5 ✅ | Tool guard | Scope ∩ initiator ∩ orchestrator; every call audited |
 | 2.6a ✅ | Injection detector + triage `scan_for_injection` + `prompt_injection` scenario | Injection phrases flagged; verdict forced to review |
-| 2.6b | PII redaction in API responses | PII hidden without `incident:read_pii` |
+| 2.6b ✅ | PII redaction in API responses | PII hidden without `incident:read_pii` |
 | 2.7 | Investigation graph (event store, timeline, ATT&CK keyword retrieval) | Techniques only from candidates |
 | 2.8 | Containment graph with `interrupt` | Pauses; resumes; executes only with quorum |
 | 2.9 | Approvals API + resume command; run records + `GET /v1/runs/{id}` | SoD, self-action, distinct approvers, 409 on decided |
