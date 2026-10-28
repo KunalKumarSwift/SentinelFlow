@@ -76,18 +76,19 @@ Design: a pure function over a lookup table so the rules are easy to test and au
 """
 
 
-def score_severity(rule_id: str, enrichment: Enrichment) -> Severity:
+def score_severity(rule_id: str, entities: Entities, enrichment: Enrichment) -> Severity:
     """Return the incident severity for a rule, adjusted by enrichment signals.
 
     Args:
         rule_id: Detection rule that raised the alert, e.g. ``"brute_force_success"``.
+        entities: Entities named by the incident; ``ip`` decides internal vs. external.
         enrichment: Threat-intel and user context gathered during triage.
 
     Returns:
         The adjusted severity, clamped to the INFO..CRITICAL range.
 
     Raises:
-        UnknownRule: If ``rule_id`` is not in the base-severity table.
+        UnknownRuleError: If ``rule_id`` is not in the base-severity table.
     """
 ```
 

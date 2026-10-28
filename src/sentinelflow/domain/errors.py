@@ -15,3 +15,7 @@ class DomainError(SentinelFlowError):
 
 class InvalidValueError(DomainError):
     """A value object was built with a value that breaks its invariants."""
+
+
+class UnknownRuleError(DomainError):
+    """An alert names a detection rule the system has no severity mapping for."""
