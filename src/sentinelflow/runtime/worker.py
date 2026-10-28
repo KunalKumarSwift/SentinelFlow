@@ -11,9 +11,11 @@ Failure policy:
 from collections.abc import Callable
 
 from sentinelflow.contracts.run_queue import Delivery, RunCommand, RunQueue
+from sentinelflow.core.logging import bound, get_logger
 from sentinelflow.domain.errors import ProviderError, SentinelFlowError
 
 BATCH_SIZE = 10
+_log = get_logger("sentinelflow.worker")
 
 
 class Worker:
@@ -39,20 +41,29 @@ class Worker:
         return len(deliveries)
 
     def _process(self, delivery: Delivery) -> None:
-        try:
-            self._handler(delivery.command)
-        # Broad on purpose: this boundary classifies every failure as retry or dead-letter.
-        except Exception as exc:
-            self._on_failure(delivery, exc)
-            return
-        self._queue.ack(delivery)
+        command = delivery.command
+        context = {"run_id": command.run_id, "tenant_id": command.tenant_id}
+        with bound(**context, command=type(command).__name__, attempt=delivery.attempt):
+            try:
+                self._handler(command)
+            # Broad on purpose: this boundary classifies every failure as retry or dead-letter.
+            except Exception as exc:
+                self._on_failure(delivery, exc)
+                return
+            self._queue.ack(delivery)
+            _log.info("run.command.done")
 
     def _on_failure(self, delivery: Delivery, exc: Exception) -> None:
         if not _is_retryable(exc):
-            self._queue.dead_letter(delivery, str(exc))
+            self._dead_letter(delivery, str(exc))
         elif delivery.attempt >= self._max_attempts:
-            reason = f"gave up after {delivery.attempt} attempts: {exc}"
-            self._queue.dead_letter(delivery, reason)
+            self._dead_letter(delivery, f"gave up after {delivery.attempt} attempts: {exc}")
+        else:
+            _log.warning("run.command.retry", error=type(exc).__name__)
+
+    def _dead_letter(self, delivery: Delivery, reason: str) -> None:
+        self._queue.dead_letter(delivery, reason)
+        _log.error("run.command.dead_lettered", reason=reason)
 
 
 def _is_retryable(exc: Exception) -> bool:

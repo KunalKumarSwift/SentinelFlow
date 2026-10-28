@@ -148,6 +148,11 @@ approvals, action execution.
 ## 8. Observability (free, self-hosted)
 
 - **Logs:** `structlog` JSON with `tenant_id`, `run_id`, `incident_id`, `principal` on every line.
+  *Built (3.4):* `core/logging.py` (`configure_logging`, `bound`, lazy `get_logger`); the API
+  middleware binds `correlation_id` (a valid incoming `X-Correlation-ID` is reused, anything
+  else replaced) and writes one `http.request` line with tenant, status and duration; the
+  worker binds `run_id`, `tenant_id`, command and attempt around each delivery and logs
+  `run.command.done` / `.retry` / `.dead_lettered`. `LOG_FORMAT=json|console`.
 - **Traces:** OpenTelemetry → Jaeger; LLM traces → Langfuse (self-hosted).
 - **Metrics:** Prometheus (`runs_total`, `run_duration_seconds`, `queue_depth`,
   `policy_denials_total`, `llm_tokens_total`) → Grafana dashboard.

@@ -138,6 +138,7 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `TENANT_TOKEN_BUDGET_DAILY` | `200000` | LLM tokens per tenant per day |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8000` | Bind address of `sentinelflow-api` |
 | `RUN_WORKER_IN_API` | `true` | `false` for API-only processes (needs `postgres` + `redis`) |
+| `LOG_FORMAT` | `json` | `json` lines or human-readable `console` |
 
 ## 5. Adding a new provider (checklist)
 

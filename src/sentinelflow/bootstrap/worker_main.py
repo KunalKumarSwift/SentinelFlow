@@ -12,6 +12,7 @@ import threading
 from sentinelflow.bootstrap.serve import work_until
 from sentinelflow.bootstrap.wiring import build_runtime
 from sentinelflow.core.config import Settings, load_settings
+from sentinelflow.core.logging import configure_logging
 
 
 def install_stop_signals(stop: threading.Event) -> None:
@@ -33,6 +34,8 @@ def run_worker(settings: Settings, stop: threading.Event) -> None:
 
 def main() -> None:  # pragma: no cover -- process entry point, exercised by Docker Compose
     """Run one worker process until it receives SIGTERM or SIGINT."""
+    settings = load_settings()
+    configure_logging(json_lines=settings.log_format == "json")
     stop = threading.Event()
     install_stop_signals(stop)
-    run_worker(load_settings(), stop)
+    run_worker(settings, stop)
