@@ -1,0 +1,295 @@
+{
+  "realm": "sentinelflow",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      {
+        "name": "alert-source",
+        "description": "SentinelFlow role alert-source"
+      },
+      {
+        "name": "soc-analyst-l1",
+        "description": "SentinelFlow role soc-analyst-l1"
+      },
+      {
+        "name": "soc-analyst-l2",
+        "description": "SentinelFlow role soc-analyst-l2"
+      },
+      {
+        "name": "incident-commander",
+        "description": "SentinelFlow role incident-commander"
+      },
+      {
+        "name": "security-engineer",
+        "description": "SentinelFlow role security-engineer"
+      },
+      {
+        "name": "auditor",
+        "description": "SentinelFlow role auditor"
+      },
+      {
+        "name": "executive",
+        "description": "SentinelFlow role executive"
+      },
+      {
+        "name": "platform-admin",
+        "description": "SentinelFlow role platform-admin"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sentinelflow-api",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "sentinelflow-cli",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience-sentinelflow-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "sentinelflow-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "team",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "team",
+            "claim.name": "team",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "siem-connector",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "change-me-siem-connector-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-sentinelflow-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "sentinelflow-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "acme",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "team",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "team",
+            "claim.value": "ops",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alice@acme.example",
+      "firstName": "Alice",
+      "lastName": "Demo",
+      "attributes": {
+        "tenant_id": [
+          "acme"
+        ],
+        "team": [
+          "soc-emea"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "soc-analyst-l1"
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "bob@acme.example",
+      "firstName": "Bob",
+      "lastName": "Demo",
+      "attributes": {
+        "tenant_id": [
+          "acme"
+        ],
+        "team": [
+          "soc-emea"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "soc-analyst-l2"
+      ]
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "carol@acme.example",
+      "firstName": "Carol",
+      "lastName": "Demo",
+      "attributes": {
+        "tenant_id": [
+          "acme"
+        ],
+        "team": [
+          "soc-emea"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "incident-commander"
+      ]
+    },
+    {
+      "username": "dave",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "dave@acme.example",
+      "firstName": "Dave",
+      "lastName": "Demo",
+      "attributes": {
+        "tenant_id": [
+          "acme"
+        ],
+        "team": [
+          "soc-emea"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "incident-commander"
+      ]
+    },
+    {
+      "username": "erin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "erin@acme.example",
+      "firstName": "Erin",
+      "lastName": "Demo",
+      "attributes": {
+        "tenant_id": [
+          "acme"
+        ],
+        "team": [
+          "compliance"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "auditor"
+      ]
+    },
+    {
+      "username": "service-account-siem-connector",
+      "enabled": true,
+      "serviceAccountClientId": "siem-connector",
+      "realmRoles": [
+        "alert-source"
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"unmanagedAttributePolicy\": \"ENABLED\", \"attributes\": [{\"name\": \"username\"}, {\"name\": \"email\"}, {\"name\": \"firstName\"}, {\"name\": \"lastName\"}]}"
+          ]
+        }
+      }
+    ]
+  }
+}

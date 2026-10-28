@@ -61,7 +61,7 @@ def test_token_signed_with_other_secret_is_rejected() -> None:
 
 
 def test_unsigned_alg_none_token_is_rejected() -> None:
-    token = jwt.PyJWS().encode(b'{"sub": "u-alice"}', key=None, algorithm="none")  # pyright: ignore[reportUnknownMemberType]
+    token = jwt.PyJWS().encode(b'{"sub": "u-alice"}', key="", algorithm="none")  # pyright: ignore[reportUnknownMemberType]
     with pytest.raises(AuthenticationError):
         _service().verify(token)
 

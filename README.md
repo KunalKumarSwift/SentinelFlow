@@ -83,6 +83,19 @@ The API process only serves HTTP (`RUN_WORKER_IN_API=false`); `sentinelflow-work
 processes share the work through Redis and resume each other's paused runs from
 PostgreSQL checkpoints.
 
+### Sign in with Keycloak (OIDC) instead of dev tokens
+
+```bash
+AUTH_MODE=oidc docker compose --profile oidc up --build
+TOKEN=$(curl -s -d grant_type=password -d client_id=sentinelflow-cli \
+  -d username=bob -d password=demo-password \
+  http://localhost:8080/realms/sentinelflow/protocol/openid-connect/token | jq -r .access_token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/v1/incidents
+```
+
+Demo users (password `demo-password`): `alice` (L1), `bob` (L2), `carol` and `dave`
+(incident commanders), `erin` (auditor).
+
 Choose an LLM for real verdicts:
 
 | `LLM_BACKEND` | Cost | Extra settings |

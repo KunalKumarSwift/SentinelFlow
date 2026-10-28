@@ -30,6 +30,28 @@ Verification rules:
 - Secrets shorter than 32 characters are refused at construction.
 - Claims are type-checked (`roles` must be a list of strings; unknown `kind` is rejected).
 
+**OIDC / Keycloak (built, slice 4.1).** `AUTH_MODE=oidc` swaps the API's verifier for
+`security/oidc/verifier.OidcTokenVerifier` (both satisfy `security/verifier.TokenVerifier`):
+
+- **RS256 only.** The key is chosen by the token's `kid` from the realm JWKS
+  (`security/oidc/jwks.CachedJwks`, downloaded by `providers/identity/jwks_http.py`). HS256
+  dev tokens, `alg: none` and tokens signed by unpublished keys are all rejected with 401.
+- **Key rotation:** an unknown `kid` triggers a JWKS refresh, but at most once per 30 s, so
+  forged key ids cannot flood the IdP. Keys also refresh hourly. An unreachable IdP is a
+  `ProviderError` (503), never an accepted token.
+- `iss` must equal `OIDC_ISSUER`, `aud` must contain `OIDC_AUDIENCE` (`sentinelflow-api`),
+  `exp - iat` ≤ 1 h, and expiry is checked with the injected clock.
+- **Claim mapping** (`security/oidc/claims.py`): `sub`; `tenant_id` and `team` from
+  user-attribute mappers; roles from `realm_access.roles`, **kept only if they are SentinelFlow
+  roles and never `orchestrator`** (the system principal's role cannot be granted by an IdP
+  administrator; deny test included). A `client_id` claim (client-credentials token) makes
+  the principal a `service`.
+- `deploy/keycloak/realm-sentinelflow.json` provides the realm: roles, the bearer-only
+  `sentinelflow-api` client, a public `sentinelflow-cli` client (password grant, demo only)
+  with audience and attribute mappers, a `siem-connector` service account (`alert-source`)
+  and demo users. `docker compose --profile oidc up` imports it. *The realm file is checked
+  for valid JSON only; it has not been imported into a live Keycloak in this environment.*
+
 ## 2. Permissions
 
 Permissions are strings `resource:verb[:qualifier]`, defined once as the `Permission` StrEnum in

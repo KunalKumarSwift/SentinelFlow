@@ -12,7 +12,7 @@ from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.permissions import Permission
 from sentinelflow.security.rbac import has_permission
 from sentinelflow.security.throttle import Throttle
-from sentinelflow.security.tokens import Hs256TokenService
+from sentinelflow.security.verifier import TokenVerifier
 
 # auto_error=False so a missing token becomes our problem+json 401, not FastAPI's 403.
 _BEARER = HTTPBearer(auto_error=False)
@@ -23,7 +23,7 @@ class Auth:
     """Builds route dependencies bound to one token service."""
 
     def __init__(
-        self, tokens: Hs256TokenService, recorder: AuditRecorder, throttle: Throttle | None = None
+        self, tokens: TokenVerifier, recorder: AuditRecorder, throttle: Throttle | None = None
     ) -> None:
         """Verify tokens with ``tokens``; audit denials; rate-limit with ``throttle``."""
         self._tokens, self._recorder, self._throttle = tokens, recorder, throttle

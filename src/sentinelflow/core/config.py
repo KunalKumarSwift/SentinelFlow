@@ -16,7 +16,9 @@ Environment:
     RUN_WORKER_IN_API (default: true; false needs Postgres storage and a Redis queue),
     LOG_FORMAT (default: "json"; "console" for human-readable local logs),
     METRICS_PORT (default: 9100; where ``sentinelflow-worker`` serves /metrics),
-    OTLP_ENDPOINT (e.g. "http://jaeger:4318"; unset = tracing off).
+    OTLP_ENDPOINT (e.g. "http://jaeger:4318"; unset = tracing off),
+    AUTH_MODE (default: "hs256"; "oidc" = Keycloak), OIDC_ISSUER, OIDC_AUDIENCE
+    (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint).
 """
 
 from typing import Literal, Self
@@ -48,6 +50,10 @@ class Settings(BaseSettings):
     log_format: Literal["json", "console"] = "json"
     metrics_port: int = Field(default=9100, gt=0, lt=65536)
     otlp_endpoint: str | None = None
+    auth_mode: Literal["hs256", "oidc"] = "hs256"
+    oidc_issuer: str | None = None
+    oidc_audience: str = "sentinelflow-api"
+    oidc_jwks_url: str | None = None
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:
@@ -55,6 +61,8 @@ class Settings(BaseSettings):
             raise ValueError("LLM_BACKEND=anthropic requires ANTHROPIC_API_KEY")
         if self.storage_backend == "postgres" and self.database_url is None:
             raise ValueError("STORAGE_BACKEND=postgres requires DATABASE_URL")
+        if self.auth_mode == "oidc" and not self.oidc_issuer:
+            raise ValueError("AUTH_MODE=oidc requires OIDC_ISSUER")
         shared = self.storage_backend == "postgres" and self.queue_backend == "redis"
         if not self.run_worker_in_api and not shared:
             # Separate workers only see work through a shared database and queue.
