@@ -166,7 +166,10 @@ hash_0 = SHA256("sentinelflow-genesis:" + tenant_id)
 - `MemoryAuditStore` serialises appends with a lock so `seq` stays gap-free when API and
   worker threads write concurrently.
 - Storage is append-only: the DB role used by the app has `INSERT, SELECT` only on `audit_events`.
-- Audited verbs: `alert.ingested`, `run.started|interrupted|resumed|completed|failed`,
+- Writes go through `security/audit_recorder.py::AuditRecorder.record(actor, verb, resource,
+  details)`; the outcome follows the verb suffix (`*.denied`, `*.failed`, else `ok`).
+- Recorded today: `alert.ingested`, `run.queued`, `policy.denied` (every API permission
+  denial), `incident.triaged` (by `svc-orchestrator`). Planned verbs: `alert.ingested`, `run.started|interrupted|resumed|completed|failed`,
   `policy.allowed|denied`, `tool.*`, `approval.requested|decided`, `injection.suspected`,
   `auth.failed`.
 

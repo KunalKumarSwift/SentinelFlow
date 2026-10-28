@@ -16,9 +16,11 @@ from sentinelflow.providers.identity.mock_identity import MockIdentity
 from sentinelflow.providers.intel.mock_intel import MockThreatIntel
 from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
+from sentinelflow.providers.storage.memory_audit import MemoryAuditStore
 from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
 from sentinelflow.runtime.start_handler import StartRunHandler
 from sentinelflow.runtime.worker import Worker
+from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.simulator.demo_seed import demo_seed_data
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
@@ -47,16 +49,17 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     _require_phase_one_backends(settings)
     clock, ids = SystemClock(), UuidIdFactory()
     alerts, incidents = MemoryAlertRepository(), MemoryIncidentRepository()
-    queue = MemoryRunQueue(clock, VISIBILITY_TIMEOUT)
+    queue, audit = MemoryRunQueue(clock, VISIBILITY_TIMEOUT), MemoryAuditStore()
     seed = demo_seed_data(demo_seed)
     triage = TriageDeps(
         MockThreatIntel(seed.ip_reputations), MockIdentity(seed.users), make_llm(settings)
     )
-    handler = StartRunHandler(alerts, incidents, build_lifecycle_graph(build_triage_graph(triage)))
+    graph = build_lifecycle_graph(build_triage_graph(triage))
+    handler = StartRunHandler(alerts, incidents, graph, AuditRecorder(audit, clock))
     ingestion = IngestionService(IngestionDeps(alerts, incidents, ids, clock, DEFAULT_TEAM))
     tokens = Hs256TokenService(settings.jwt_secret.get_secret_value(), clock)
     container = ApiContainer(
-        settings.app_env, tokens, ingestion, incidents, DEFAULT_REGISTRY, queue, ids
+        settings.app_env, tokens, ingestion, incidents, DEFAULT_REGISTRY, queue, ids, audit, clock
     )
     return Runtime(container, Worker(queue, handler, "worker-1"))
 

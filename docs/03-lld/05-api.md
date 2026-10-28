@@ -31,8 +31,8 @@ to domain objects at the edge.
 | GET | `/v1/runs/{run_id}` | `incident:read` | Run status: `queued/running/waiting/completed/failed` (Phase 2, needs run records) |
 | GET | `/v1/approvals` | `action:approve:*` (any) | Pending approvals the caller is eligible for |
 | POST | `/v1/approvals/{id}/decision` | `action:approve:<impact>` | Approve / reject with reason |
-| GET | `/v1/audit` | `audit:read` | Audit events (filters: incident_id, verb, since) |
-| GET | `/v1/audit/verify` | `audit:verify` | Verify the tenant's hash chain |
+| GET | `/v1/audit` | `audit:read` | Tenant's audit events, paged by `after_seq` + `limit` (≤ 500) ✅ |
+| GET | `/v1/audit/verify` | `audit:verify` | Re-hash the tenant's whole chain → `{ok, first_bad_seq, checked}` ✅ |
 | GET | `/healthz` | none | Liveness |
 | GET | `/readyz` | none | Readiness (DB, queue reachable) |
 | GET | `/metrics` | none (internal network) | Prometheus metrics (Phase 3) |

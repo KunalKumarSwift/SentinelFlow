@@ -2,9 +2,12 @@
 
 from dataclasses import dataclass
 
+from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.repositories import IncidentRepository
 from sentinelflow.contracts.run_queue import RunQueue
+from sentinelflow.core.clock import Clock
 from sentinelflow.core.ids import IdFactory
+from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionService
 from sentinelflow.workflows.registry import WorkflowRegistry
@@ -25,3 +28,9 @@ class ApiContainer:
     registry: WorkflowRegistry
     queue: RunQueue
     ids: IdFactory
+    audit: AuditStore
+    clock: Clock
+
+    def recorder(self) -> AuditRecorder:
+        """Return an audit recorder bound to this container's store and clock."""
+        return AuditRecorder(self.audit, self.clock)
