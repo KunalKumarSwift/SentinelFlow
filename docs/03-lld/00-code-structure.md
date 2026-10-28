@@ -39,8 +39,8 @@ WorkflowOrchestration/
 │   │   └── orchestrator/
 │   ├── runtime/              # worker loop, command handling
 │   ├── api/                  # FastAPI routes, schemas, dependencies
-│   ├── simulator/            # synthetic scenario generators + CLI
-│   └── bootstrap.py          # composition root: builds and wires everything
+│   ├── simulator/            # synthetic scenario generators, demo seed, CLI (sentinelflow-sim)
+│   └── bootstrap/            # composition root: wiring.py builds everything; serve.py runs it
 └── tests/                    # mirrors src/ one-to-one
     ├── fakes/                # one Fake per protocol, shared by all tests
     ├── unit/  integration/  api/  e2e/
