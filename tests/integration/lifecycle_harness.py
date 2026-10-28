@@ -54,6 +54,7 @@ class Harness:
         self.graph: LifecycleGraph | None = None
         self.identity: FakeIdentityProvider | None = None
         self.deps: LifecycleDeps | None = None
+        self.saver = InMemorySaver()
 
     def start(self, scenario: str, initiator: Principal | None = None) -> bool:
         """Build and run the lifecycle for the scenario's first alert; True if waiting."""
@@ -68,7 +69,7 @@ class Harness:
         self.incidents.add(an_incident(entities=alert.entities, alert_ids=(alert.id,)))
         self.identity = FakeIdentityProvider(out.seed_data.users)
         self.deps = lifecycle_deps(self.stores, alerts, out, self.identity)
-        self.graph = build_lifecycle_graph(self.deps, InMemorySaver())
+        self.graph = build_lifecycle_graph(self.deps, self.saver)
         owner = initiator or orchestrator_for("acme")
         run = RunRecord(
             "run-1", "acme", "triage", "inc-0001", alert.id, owner, RunStatus.QUEUED, T0

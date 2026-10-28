@@ -150,3 +150,10 @@ On SIGTERM (built: `install_stop_signals`): stop claiming, finish the current ba
 (LangGraph checkpoints after each super-step), do **not** ack unfinished work, exit.
 A command killed mid-flight becomes claimable again after the visibility timeout and
 another worker resumes it from its checkpoint.
+
+**Proven by tests (3.8):** `tests/integration/test_crash_recovery.py` kills a worker after
+triage was checkpointed (its event store fails mid-investigation); the command stays
+unacked and invisible until the visibility timeout, then a second worker claims it and
+continues at investigation: `incident.triaged` is audited exactly once and the run ends
+`waiting` for approvals. `tests/unit/bootstrap/test_postgres_runtime.py` shows the same
+across processes with the Postgres checkpointer.
