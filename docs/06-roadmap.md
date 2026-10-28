@@ -78,7 +78,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | Slice | Deliverable |
 |---|---|
 | 4.1 ✅ | Keycloak realm export + RS256/JWKS verifier |
-| 4.2 | `OpaPolicyEngine` + Rego policies, same test-suite as in-code engine |
+| 4.2 ✅ | `OpaPolicyEngine` + Rego policies, same test-suite as in-code engine |
 | 4.3 | PostgreSQL row-level security per tenant |
 | 4.4 | Access-review scheduled workflow |
 | 4.5 | Helm chart, HPA for API, KEDA for workers |

@@ -18,7 +18,8 @@ Environment:
     METRICS_PORT (default: 9100; where ``sentinelflow-worker`` serves /metrics),
     OTLP_ENDPOINT (e.g. "http://jaeger:4318"; unset = tracing off),
     AUTH_MODE (default: "hs256"; "oidc" = Keycloak), OIDC_ISSUER, OIDC_AUDIENCE
-    (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint).
+    (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint),
+    POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL.
 """
 
 from typing import Literal, Self
@@ -54,6 +55,8 @@ class Settings(BaseSettings):
     oidc_issuer: str | None = None
     oidc_audience: str = "sentinelflow-api"
     oidc_jwks_url: str | None = None
+    policy_engine: Literal["incode", "opa"] = "incode"
+    opa_url: str = "http://localhost:8181"
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:

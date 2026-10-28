@@ -145,6 +145,8 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `OIDC_ISSUER` | — | Expected `iss`, e.g. `http://localhost:8080/realms/sentinelflow` (required for `oidc`) |
 | `OIDC_AUDIENCE` | `sentinelflow-api` | Expected `aud` |
 | `OIDC_JWKS_URL` | `<issuer>/protocol/openid-connect/certs` | Where signing keys are fetched |
+| `POLICY_ENGINE` | `incode` | `opa` asks OPA (Rego in `deploy/opa`) for every decision; fails closed |
+| `OPA_URL` | `http://localhost:8181` | OPA server |
 
 ## 5. Adding a new provider (checklist)
 

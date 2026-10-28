@@ -1,0 +1,70 @@
+{
+  "sentinelflow": {
+    "roles": {
+      "alert-source": [
+        "alert:ingest"
+      ],
+      "auditor": [
+        "audit:read",
+        "audit:verify"
+      ],
+      "executive": [
+        "incident:read",
+        "incident:read_all"
+      ],
+      "incident-commander": [
+        "action:approve:high",
+        "action:approve:low",
+        "action:approve:medium",
+        "action:propose",
+        "incident:close",
+        "incident:read",
+        "incident:read_all",
+        "incident:read_pii",
+        "workflow:run:containment",
+        "workflow:run:investigation",
+        "workflow:run:triage"
+      ],
+      "orchestrator": [
+        "action:execute",
+        "action:propose",
+        "events:read",
+        "identity:read",
+        "incident:read",
+        "incident:read_all",
+        "incident:read_pii",
+        "intel:lookup",
+        "workflow:run:containment",
+        "workflow:run:investigation",
+        "workflow:run:triage"
+      ],
+      "platform-admin": [
+        "audit:read",
+        "audit:verify",
+        "tenant:admin"
+      ],
+      "security-engineer": [
+        "incident:read",
+        "integration:manage",
+        "workflow:publish"
+      ],
+      "soc-analyst-l1": [
+        "action:propose",
+        "incident:read",
+        "workflow:run:containment",
+        "workflow:run:triage"
+      ],
+      "soc-analyst-l2": [
+        "action:approve:low",
+        "action:approve:medium",
+        "action:propose",
+        "incident:close",
+        "incident:read",
+        "incident:read_pii",
+        "workflow:run:containment",
+        "workflow:run:investigation",
+        "workflow:run:triage"
+      ]
+    }
+  }
+}

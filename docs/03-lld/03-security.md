@@ -147,9 +147,18 @@ Algorithm of `InCodePolicyEngine` (deny overrides):
 3. Run every applicable ABAC rule; the **first** deny wins.
 4. Otherwise allow `"granted by role R"`.
 
-Every decision (allow **and** deny) is audited by the caller. Phase 4 adds
-`OpaPolicyEngine` implementing the same protocol by calling an OPA sidecar with the
-same `AccessRequest` JSON; the same test-suite runs against both.
+Every decision (allow **and** deny) is audited by the caller.
+
+**OPA engine (built, slice 4.2).** `POLICY_ENGINE=opa` swaps in `security/opa_engine.OpaPolicyEngine`,
+which posts the request (`security/opa_input.to_input`: sets become sorted lists, no action →
+`null`) to `/v1/data/sentinelflow/authz/decision` and reads `{allowed, reason}`. It **fails
+closed**: an unreachable server, an error status, no loaded policy or a malformed answer all
+deny with `policy engine unavailable`. The policy, `deploy/opa/sentinelflow/authz.rego`,
+reproduces the order and the exact reason strings above. Its role data, `deploy/opa/data.json`,
+is generated from `security/roles.py` by `scripts/gen_opa_data.py`, and a drift test keeps the
+two in step. `tests/contracts/test_policy_engine_contract.py` runs **both engines** through
+every rule and the full role × permission matrix. In CI, OPA is installed with `setup-opa`,
+`opa test deploy/opa` runs the Rego unit tests, and an OPA server provides `TEST_OPA_URL`.
 
 ## 6. Tool guard (`security/tool_guard.py`)
 

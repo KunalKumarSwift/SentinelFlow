@@ -6,8 +6,8 @@ from sentinelflow.contracts.metrics import Metrics
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.auth_facade import make_verifier
+from sentinelflow.facades.policy_facade import make_policy_engine
 from sentinelflow.facades.shared_state_facade import make_rate_limiter
-from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
@@ -32,7 +32,7 @@ def build_container(
         queue=stores.queue,
         runs=stores.runs,
         approvals=stores.approvals,
-        policy=InCodePolicyEngine(),
+        policy=make_policy_engine(settings),
         ids=ids,
         audit=stores.audit,
         clock=stores.clock,
