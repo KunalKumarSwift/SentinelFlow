@@ -10,6 +10,7 @@ from sentinelflow.domain.severity import Severity
 
 __all__ = [
     "ActionKind",
+    "ActionResult",
     "ApprovalRequirement",
     "Impact",
     "ProposedAction",
@@ -39,6 +40,15 @@ class ProposedAction:
     def impact(self) -> Impact:
         """Impact comes from the catalogue, never from the proposer."""
         return CATALOGUE[self.kind].impact
+
+
+@dataclass(frozen=True, slots=True)
+class ActionResult:
+    """What happened when a provider applied an action."""
+
+    action_id: str
+    succeeded: bool
+    detail: str
 
 
 @dataclass(frozen=True, slots=True)

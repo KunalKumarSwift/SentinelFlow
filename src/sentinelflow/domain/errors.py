@@ -56,3 +56,7 @@ class PolicyDeniedError(AuthorizationError):
 
 class UnknownActionError(DomainError):
     """A requested action is not in the action catalogue (the allow-list)."""
+
+
+class ConflictError(SentinelFlowError):
+    """The request conflicts with current state, e.g. an approval already decided (HTTP 409)."""

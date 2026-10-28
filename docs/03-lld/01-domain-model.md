@@ -134,7 +134,9 @@ Each rule is one small pure function in `domain/` with its own test file.
 | `score_severity(rule_id, entities, enrichment) -> Severity` | Rules below (`domain/scoring.py`, table in `scoring_table.py`) |
 | `apply_verdict(incident, result) -> Incident` | Returns a new incident with status `TRIAGED` or `CLOSED` |
 | `approval_requirement(kind, severity)` | Catalogue above |
-| `record_decision(approval, decision) -> Approval` | Appends a decision; computes the new status |
+| `new_approval(id, tenant, run, action, severity, now)` | Role and quorum from the catalogue; expires after 4 h |
+| `record_decision(approval, decision) -> Approval` | Appends a decision; any rejection → REJECTED, quorum met → APPROVED; deciding twice or on a closed approval → `ConflictError` |
+| `expire_if_due(approval, now) -> Approval` | Pending past `expires_at` → EXPIRED |
 | `next_status(current, event) -> IncidentStatus` | Explicit state machine (`domain/lifecycle.py`); events are `IncidentEvent` values; anything not in the table raises `InvalidTransitionError` |
 | `transition(incident, event) -> Incident` | Returns a copy with the new status |
 
