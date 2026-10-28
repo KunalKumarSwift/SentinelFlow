@@ -98,20 +98,25 @@ Each rule is a small pure function `(Request) -> Decision | None` (`None` = not 
 
 ```python
 @dataclass(frozen=True, slots=True)
-class AccessRequest:
+class AccessRequest:                     # security/policy.py
     principal: Principal
-    permission: str
-    resource: Resource          # kind, id, tenant_id, team, attributes
-    context: Mapping[str, str]  # e.g. run_id, initiator, proposer
+    permission: Permission
+    resource: Resource                   # kind, id, tenant_id, team
+    action: ActionContext | None = None  # target_user, proposer, initiator,
+                                         # prior_approvers, approval_open, quorum_met
 
 @dataclass(frozen=True, slots=True)
 class Decision:
     allowed: bool
-    reason: str                 # always populated — shown to users and audited
+    reason: str                          # always populated — shown to users and audited
 
 class PolicyEngine(Protocol):
     def evaluate(self, request: AccessRequest) -> Decision: ...
 ```
+
+`ActionContext` is a typed dataclass rather than a string map, so a missing or misspelt
+fact is a type error. Approval rules **fail closed**: an `action:approve:*` request without
+an `ActionContext` is denied.
 
 Algorithm of `InCodePolicyEngine` (deny overrides):
 
