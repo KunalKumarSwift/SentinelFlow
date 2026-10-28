@@ -16,6 +16,7 @@ from sentinelflow.domain.errors import (
     SentinelFlowError,
 )
 from sentinelflow.domain.principals import Principal
+from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.permissions import Permission
 from sentinelflow.security.tokens import Hs256TokenService
 from tests.api.conftest import TokenFor, make_container
@@ -24,8 +25,10 @@ from tests.api.conftest import TokenFor, make_container
 @pytest.fixture
 def probe(tokens: Hs256TokenService) -> TestClient:
     """App with extra routes that exercise auth and error mapping."""
-    app = create_app(make_container(tokens))
-    ingest = Auth(tokens).require(Permission.ALERT_INGEST)
+    container = make_container(tokens)
+    app = create_app(container)
+    recorder = AuditRecorder(container.audit, container.clock)
+    ingest = Auth(tokens, recorder).require(Permission.ALERT_INGEST)
 
     @app.get("/probe")
     def probe_route(principal: Annotated[Principal, Depends(ingest)]) -> dict[str, str]:

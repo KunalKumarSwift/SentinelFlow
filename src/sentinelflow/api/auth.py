@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from sentinelflow.domain.errors import AuthenticationError, PolicyDeniedError
 from sentinelflow.domain.principals import Principal
+from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.permissions import Permission
 from sentinelflow.security.rbac import has_permission
 from sentinelflow.security.tokens import Hs256TokenService
@@ -20,9 +21,9 @@ Credentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
 class Auth:
     """Builds route dependencies bound to one token service."""
 
-    def __init__(self, tokens: Hs256TokenService) -> None:
-        """Verify tokens with ``tokens``."""
-        self._tokens = tokens
+    def __init__(self, tokens: Hs256TokenService, recorder: AuditRecorder) -> None:
+        """Verify tokens with ``tokens``; audit every permission denial."""
+        self._tokens, self._recorder = tokens, recorder
 
     def current_principal(self, credentials: Credentials) -> Principal:
         """Return the verified caller.
@@ -41,6 +42,7 @@ class Auth:
             principal: Annotated[Principal, Depends(self.current_principal)],
         ) -> Principal:
             if not has_permission(principal, permission):
+                self._recorder.record(principal, "policy.denied", "api", {"permission": permission})
                 raise PolicyDeniedError(f"missing permission {permission}")
             return principal
 

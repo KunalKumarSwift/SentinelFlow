@@ -25,4 +25,6 @@ def enqueue_triage(container: ApiContainer, principal: Principal, incident: Inci
         initiator=principal.subject,
     )
     container.queue.publish(command)
+    details = {"run_id": run_id, "workflow": "triage"}
+    container.recorder().record(principal, "run.queued", incident.id, details)
     return run_id

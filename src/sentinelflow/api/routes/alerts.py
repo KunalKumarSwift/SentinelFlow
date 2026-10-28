@@ -23,6 +23,8 @@ def build_alerts_router(container: ApiContainer, auth: Auth) -> APIRouter:
     ) -> AlertAccepted:
         """Store the alert; a new incident gets a triage run queued."""
         result = container.ingestion.ingest(body.to_domain(principal, container.ids))
+        details = {"incident_id": result.incident_id, "deduplicated": str(result.deduplicated)}
+        container.recorder().record(principal, "alert.ingested", result.alert_id, details)
         run_id = None
         if not result.deduplicated:
             run_id = enqueue_triage(container, principal, result.incident)

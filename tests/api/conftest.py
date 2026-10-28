@@ -11,6 +11,7 @@ from sentinelflow.api.container import ApiContainer
 from sentinelflow.domain.principals import Principal, PrincipalKind
 from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
+from sentinelflow.providers.storage.memory_audit import MemoryAuditStore
 from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
@@ -43,6 +44,8 @@ def make_container(tokens: Hs256TokenService, app_env: str = "dev") -> ApiContai
         registry=DEFAULT_REGISTRY,
         queue=MemoryRunQueue(clock, timedelta(seconds=60)),
         ids=ids,
+        audit=MemoryAuditStore(),
+        clock=clock,
     )
 
 
