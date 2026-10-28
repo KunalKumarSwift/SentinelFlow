@@ -39,6 +39,13 @@ services:
       RUN_WORKER_IN_API: "false"
     ports: ["8000:8000"]
 
+  ui:
+    <<: *app
+    # Enter http://api:8000 as the API address in the sidebar.
+    command: ["streamlit", "run", "/app/src/sentinelflow/ui/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    environment: { STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false" }
+    ports: ["8501:8501"]
+
   worker:
     <<: *app
     command: ["sentinelflow-worker"]

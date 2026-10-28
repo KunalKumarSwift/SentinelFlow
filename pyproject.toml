@@ -31,6 +31,9 @@ sentinelflow-worker = "sentinelflow.bootstrap.worker_main:main"
 sentinelflow-access-review = "sentinelflow.bootstrap.access_review_main:main"
 sentinelflow-sim = "sentinelflow.simulator.cli:run"
 
+[tool.uv]
+default-groups = ["dev", "ui"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",
@@ -40,6 +43,9 @@ dev = [
     "pyright>=1.1.390",
     "import-linter>=2.1",
     "locust>=2.32",
+]
+ui = [
+    "streamlit>=1.40",
 ]
 
 [build-system]
@@ -58,6 +64,8 @@ markers = ["e2e: end-to-end tests that need the Docker Compose stack"]
 [tool.coverage.run]
 source = ["src/sentinelflow"]
 branch = true
+# The Streamlit shell only renders; its logic lives in ui/client.py and ui/views.py.
+omit = ["src/sentinelflow/ui/app.py"]
 
 [tool.coverage.report]
 fail_under = 90

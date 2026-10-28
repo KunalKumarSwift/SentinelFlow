@@ -8,3 +8,6 @@ coverage.xml
 htmlcov/
 .env
 dist/
+
+# Local Redis snapshots
+dump.rdb

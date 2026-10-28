@@ -72,6 +72,16 @@ STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/sent
 APP_ENV=dev JWT_SECRET=change-me-to-32-or-more-characters uv run sentinelflow-api
 ```
 
+### Analyst UI (Streamlit)
+
+```bash
+uv run streamlit run src/sentinelflow/ui/app.py     # http://localhost:8501
+```
+
+Pick a user and role in the sidebar (dev tokens), then browse incidents, approve or reject
+from the approvals inbox, and verify the audit chain. The UI is a pure REST client
+(enforced by an import-linter contract), so every API rule applies to it.
+
 ### Run scaled out (Docker Compose)
 
 ```bash
