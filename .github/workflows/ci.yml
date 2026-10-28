@@ -64,3 +64,20 @@ jobs:
         env:
           TEST_OPA_URL: http://127.0.0.1:8181
         run: uv run pytest -m "not e2e" --cov --cov-report=term-missing
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+      - name: Lint chart
+        run: helm lint deploy/helm/sentinelflow --strict
+      - name: Render (defaults, and with KEDA)
+        run: |
+          helm template sf deploy/helm/sentinelflow > /tmp/default.yaml
+          helm template sf deploy/helm/sentinelflow --set worker.keda.enabled=true > /tmp/keda.yaml
+          grep -q "kind: HorizontalPodAutoscaler" /tmp/default.yaml
+          grep -q "kind: ScaledObject" /tmp/keda.yaml
+          ! grep -q "kind: ScaledObject" /tmp/default.yaml

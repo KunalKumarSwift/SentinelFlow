@@ -1,6 +1,8 @@
 """Prometheus metrics on an injected registry (one per process; tests use their own)."""
 
-from prometheus_client import CollectorRegistry, Counter, Histogram, generate_latest
+from collections.abc import Callable
+
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest
 
 _PREFIX = "sentinelflow"
 
@@ -56,6 +58,17 @@ class PrometheusMetrics:
     def llm_tokens(self, tenant_id: str, tokens: int) -> None:
         """Add reserved tokens for ``tenant_id``."""
         self._tokens.labels(tenant_id).inc(tokens)
+
+    def track_queue_depth(self, depth: Callable[[], int]) -> None:
+        """Export ``depth()`` as ``sentinelflow_queue_messages``, read at scrape time.
+
+        KEDA scales workers on this gauge (Prometheus scaler), since the queue is a
+        sorted set its Redis scaler cannot read.
+        """
+        gauge = Gauge(
+            f"{_PREFIX}_queue_messages", "Queued or in-flight run commands", registry=self.registry
+        )
+        gauge.set_function(lambda: float(depth()))
 
     def exposition(self) -> bytes:
         """Return every metric in Prometheus text format."""

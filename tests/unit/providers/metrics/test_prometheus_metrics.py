@@ -49,3 +49,12 @@ def test_null_metrics_accept_everything_and_export_nothing() -> None:
     metrics.audit_event("x")
     metrics.llm_tokens("acme", 1)
     assert metrics.exposition() == b""
+
+
+def test_queue_depth_is_read_at_scrape_time() -> None:
+    metrics, registry = _metrics()
+    depth = [4]
+    metrics.track_queue_depth(lambda: depth[0])
+    assert registry.get_sample_value("sentinelflow_queue_messages") == 4
+    depth[0] = 1
+    assert registry.get_sample_value("sentinelflow_queue_messages") == 1

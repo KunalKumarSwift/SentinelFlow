@@ -62,6 +62,10 @@ class RunQueue(Protocol):
         """Remove a delivery from circulation and keep it aside with ``reason``."""
         ...
 
+    def depth(self) -> int:
+        """Return how many commands are queued or in flight (not yet acked)."""
+        ...
+
     def dead_letters(self) -> Sequence[tuple[Delivery, str]]:
         """Return dead-lettered deliveries with their reasons, oldest first."""
         ...

@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "sentinelflow.fullname" . }}-api
+  labels:
+    {{- include "sentinelflow.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "sentinelflow.selector" (dict "root" . "component" "api") | nindent 6 }}

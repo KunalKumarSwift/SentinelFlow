@@ -94,3 +94,12 @@ def test_concurrent_consumers_never_share_a_delivery(queue: RunQueue) -> None:
         batches = list(pool.map(claim, range(12)))
     ids = [d.id for batch in batches for d in batch]
     assert len(ids) == len(set(ids)) == 30
+
+
+def test_depth_counts_messages_not_yet_acked(queue: RunQueue) -> None:
+    for n in range(3):
+        queue.publish(_cmd(n))
+    [first] = queue.claim("w1", max_items=1)
+    assert queue.depth() == 3
+    queue.ack(first)
+    assert queue.depth() == 2

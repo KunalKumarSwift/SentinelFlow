@@ -1,0 +1,35 @@
+{{- if .Values.accessReview.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "sentinelflow.fullname" . }}-access-review
+  labels:
+    {{- include "sentinelflow.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.accessReview.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "sentinelflow.selector" (dict "root" . "component" "access-review") | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "sentinelflow.fullname" . }}
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: access-review
+              image: {{ include "sentinelflow.image" . }}
+              command: ["sentinelflow-access-review"]
+              envFrom:
+                {{- include "sentinelflow.envFrom" . | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+          volumes:
+            - { name: tmp, emptyDir: {} }
+{{- end }}
