@@ -20,6 +20,7 @@ def test_false_positive_closes_without_approvals() -> None:
     h = Harness()
     assert h.start("benign_travel") is False
     assert _status(h) is IncidentStatus.CLOSED and h.approvals.pending("acme") == []
+    assert h.ticketing.get("acme", "inc-0001") is None
 
 
 def test_attack_pauses_for_approval_with_catalogue_requirements() -> None:
@@ -49,11 +50,13 @@ def test_all_approved_executes_and_contains() -> None:
     for approval in h.approvals.pending("acme"):
         h.decide(approval, "u-cmdr")
     assert h.resume() is False
-    assert _status(h) is IncidentStatus.CONTAINED
+    assert _status(h) is IncidentStatus.CLOSED
     assert h.identity is not None
     assert [a.kind for a in h.identity.applied] == [ActionKind.DISABLE_USER, ActionKind.BLOCK_IP]
     verbs = [e.verb for e in h.audit.read("acme", 0, 100)]
     assert verbs.count("tool.allowed") == 4 and "incident.contained" in verbs
+    ticket = h.ticketing.get("acme", "inc-0001")
+    assert ticket is not None and "disable_user" in ticket.body and "Contained." in ticket.body
 
 
 def test_all_rejected_escalates_without_side_effects() -> None:
@@ -66,6 +69,8 @@ def test_all_rejected_escalates_without_side_effects() -> None:
     assert h.identity is not None and h.identity.applied == []
     statuses = {a.status for a in h.approvals.for_run("acme", "run-1")}
     assert statuses == {ApprovalStatus.REJECTED}
+    ticket = h.ticketing.get("acme", "inc-0001")
+    assert ticket is not None and "rejected" in ticket.body
 
 
 def test_initiator_who_cannot_propose_gets_no_approvals_and_escalates() -> None:

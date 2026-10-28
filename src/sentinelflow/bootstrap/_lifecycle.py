@@ -10,6 +10,7 @@ from sentinelflow.providers.identity.mock_identity import MockIdentity
 from sentinelflow.providers.intel.mock_intel import MockThreatIntel
 from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.policy_engine import InCodePolicyEngine
+from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tool_guard import ToolGuard
 from sentinelflow.simulator.demo_seed import demo_events, demo_seed_data
 from sentinelflow.workflows.investigation import InvestigationDeps, build_investigation_graph
@@ -19,7 +20,9 @@ from sentinelflow.workflows.registry import DEFAULT_REGISTRY
 from sentinelflow.workflows.triage import TriageDeps, build_triage_graph
 
 
-def build_lifecycle(stores: Stores, llm: LLMProvider, demo_seed: int) -> LifecycleGraph:
+def build_lifecycle(
+    stores: Stores, llm: LLMProvider, redactor: Redactor, demo_seed: int
+) -> LifecycleGraph:
     """Return the lifecycle graph wired to mock providers seeded for the demo."""
     seed = demo_seed_data(demo_seed)
     identity = MockIdentity(seed.users)
@@ -41,5 +44,9 @@ def build_lifecycle(stores: Stores, llm: LLMProvider, demo_seed: int) -> Lifecyc
         clock=stores.clock,
         ids=UuidIdFactory(),
         containment_scope=DEFAULT_REGISTRY.get("containment").max_scope,
+        llm=llm,
+        audit=stores.audit,
+        ticketing=stores.ticketing,
+        redactor=redactor,
     )
     return build_lifecycle_graph(deps, InMemorySaver())

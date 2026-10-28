@@ -15,6 +15,7 @@ from sentinelflow.providers.storage.memory_approvals import MemoryApprovalReposi
 from sentinelflow.providers.storage.memory_audit import MemoryAuditStore
 from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
 from sentinelflow.providers.storage.memory_runs import MemoryRunRepository
+from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
 from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tokens import Hs256TokenService
@@ -54,6 +55,7 @@ def make_container(tokens: Hs256TokenService, app_env: str = "dev") -> ApiContai
         audit=MemoryAuditStore(),
         clock=clock,
         redactor=Redactor(b"r" * 32),
+        ticketing=MemoryTicketing(),
     )
 
 

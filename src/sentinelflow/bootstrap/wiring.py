@@ -43,16 +43,17 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     """
     _require_memory_backends(settings)
     stores = Stores(SystemClock())
-    graph = build_lifecycle(stores, make_llm(settings), demo_seed)
+    redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
+    graph = build_lifecycle(stores, make_llm(settings), redactor, demo_seed)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),
         ResumeRunHandler(stores.runs, graph, stores.clock),
     )
     worker = Worker(stores.queue, handler, "worker-1")
-    return Runtime(_container(settings, stores), worker)
+    return Runtime(_container(settings, stores, redactor), worker)
 
 
-def _container(settings: Settings, stores: Stores) -> ApiContainer:
+def _container(settings: Settings, stores: Stores, redactor: Redactor) -> ApiContainer:
     ids, secret = UuidIdFactory(), settings.jwt_secret.get_secret_value()
     deps = IngestionDeps(stores.alerts, stores.incidents, ids, stores.clock, DEFAULT_TEAM)
     return ApiContainer(
@@ -68,7 +69,8 @@ def _container(settings: Settings, stores: Stores) -> ApiContainer:
         ids=ids,
         audit=stores.audit,
         clock=stores.clock,
-        redactor=Redactor(_derive_key(secret, "pii")),
+        redactor=redactor,
+        ticketing=stores.ticketing,
     )
 
 

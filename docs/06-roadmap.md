@@ -53,7 +53,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 2.8a ✅ | Approvals (quorum, rejection, expiry), run records, their repositories; `IdentityProvider.apply` (idempotent) | Two-person rule; duplicate decision → conflict; idempotent apply |
 | 2.8b ✅ | Lifecycle: investigation + containment with `interrupt` and a checkpointer | Pauses; resumes; executes only with quorum |
 | 2.9 ✅ | Approvals API + resume command; run records + `GET /v1/runs/{id}` | SoD, self-action, distinct approvers, 409 on decided |
-| 2.10 | Report graph + ticketing | Report contains facts; ticket created |
+| 2.10 ✅ | Report step + ticketing (facts from the audit trail) | Report contains facts; ticket created |
 | 2.11 | PostgreSQL repositories + Postgres checkpointer | Contract tests run against memory and Postgres (testcontainers) |
 | 2.12 | Remaining simulator scenarios | Each scenario's `expected` met end-to-end (graph level) |
 

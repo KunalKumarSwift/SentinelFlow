@@ -3,9 +3,9 @@
 # strict mode; this wiring file opts out of that one check. Steps stay fully strict.
 """Wire the lifecycle and provide typed start/resume entry points.
 
-    START → triage ─┬─ (closed) → END
-                    └─ investigate ─┬─ (no approvals) → END
-                                    └─ await_decisions ⟲ (pending) → contain → END
+    START → triage ─┬─ (closed: false positive) → END
+                    └─ investigate ─┬─ (no approvals) ───────────────────────┐
+                                    └─ await_decisions ⟲ (pending) → contain ┴→ report → END
 
 ``thread_id = run_id`` so any worker can resume any run from the checkpointer.
 """
@@ -23,6 +23,7 @@ from sentinelflow.workflows.orchestrator.state import LifecycleState
 from sentinelflow.workflows.orchestrator.steps.await_step import make_await_step
 from sentinelflow.workflows.orchestrator.steps.contain_step import make_contain_step
 from sentinelflow.workflows.orchestrator.steps.investigate_step import make_investigate_step
+from sentinelflow.workflows.orchestrator.steps.report_step import make_report_step
 from sentinelflow.workflows.orchestrator.steps.triage_step import make_triage_step
 
 LifecycleGraph = CompiledStateGraph[LifecycleState, None, LifecycleState, LifecycleState]
@@ -37,13 +38,17 @@ def build_lifecycle_graph(
     graph.add_node("investigate", make_investigate_step(deps))
     graph.add_node("await_decisions", make_await_step(deps))
     graph.add_node("contain", make_contain_step(deps))
+    graph.add_node("report", make_report_step(deps))
     graph.add_edge(START, "triage")
     graph.add_conditional_edges("triage", routes.after_triage(deps), ["investigate", END])
-    graph.add_conditional_edges("investigate", routes.after_investigation, ["await_decisions", END])
+    graph.add_conditional_edges(
+        "investigate", routes.after_investigation, ["await_decisions", "report"]
+    )
     graph.add_conditional_edges(
         "await_decisions", routes.after_await(deps), ["await_decisions", "contain"]
     )
-    graph.add_edge("contain", END)
+    graph.add_edge("contain", "report")
+    graph.add_edge("report", END)
     return graph.compile(checkpointer=checkpointer)
 
 

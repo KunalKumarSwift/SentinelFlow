@@ -10,6 +10,7 @@ from sentinelflow.providers.storage.memory_approvals import MemoryApprovalReposi
 from sentinelflow.providers.storage.memory_audit import MemoryAuditStore
 from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
 from sentinelflow.providers.storage.memory_runs import MemoryRunRepository
+from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
 
 VISIBILITY_TIMEOUT = timedelta(seconds=60)
 
@@ -24,6 +25,7 @@ class Stores:
     approvals: MemoryApprovalRepository = field(default_factory=MemoryApprovalRepository)
     runs: MemoryRunRepository = field(default_factory=MemoryRunRepository)
     audit: MemoryAuditStore = field(default_factory=MemoryAuditStore)
+    ticketing: MemoryTicketing = field(default_factory=MemoryTicketing)
     queue: MemoryRunQueue = field(init=False)
 
     def __post_init__(self) -> None:

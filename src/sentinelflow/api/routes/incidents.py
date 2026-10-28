@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 
 from sentinelflow.api.auth import Auth
 from sentinelflow.api.container import ApiContainer
-from sentinelflow.api.schemas.incidents import IncidentOut, IncidentPage
+from sentinelflow.api.schemas.incidents import IncidentOut, IncidentPage, ReportOut
 from sentinelflow.domain.errors import NotFoundError
 from sentinelflow.domain.incidents import Incident
 from sentinelflow.domain.principals import Principal
@@ -33,6 +33,16 @@ def build_incidents_router(container: ApiContainer, auth: Auth) -> APIRouter:
         if incident is None:
             raise NotFoundError(f"incident {incident_id} not found")
         return _view(incident, principal)
+
+    @router.get("/{incident_id}/report")
+    def get_report(
+        incident_id: str, principal: Annotated[Principal, Depends(can_read)]
+    ) -> ReportOut:
+        """Return the post-incident report (user identifiers are pseudonymised)."""
+        ticket = container.ticketing.get(principal.tenant_id, incident_id)
+        if ticket is None:
+            raise NotFoundError(f"no report for incident {incident_id}")
+        return ReportOut(ticket_id=ticket.id, title=ticket.title, body=ticket.body)
 
     def _view(incident: Incident, principal: Principal) -> IncidentOut:
         return IncidentOut.of(

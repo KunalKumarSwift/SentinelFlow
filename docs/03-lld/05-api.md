@@ -25,6 +25,7 @@ to domain objects at the edge.
 | POST | `/v1/alerts` | `alert:ingest` | 202. Ingest one alert (tenant from token; extra body fields → 422); a new incident gets a triage run queued (`run_id`) ✅ |
 | GET | `/v1/incidents` | `incident:read` | Tenant's incidents, oldest first ✅ (filters, cursor pagination and team scope: Phase 2) |
 | GET | `/v1/incidents/{id}` | `incident:read` | Incident detail; other tenants' incidents are 404; `user`/`email_id` pseudonymised without `incident:read_pii` ✅ |
+| GET | `/v1/incidents/{id}/report` | `incident:read` | Post-incident report (ticket); user identifiers pseudonymised ✅ |
 | POST | `/v1/incidents/{id}/close` | `incident:close` | Close / escalate with a reason |
 | GET | `/v1/workflows` | `incident:read` | Registry listing: name, version, required permission ✅ |
 | POST | `/v1/workflows/{name}/runs` | `workflow:run:<name>` | 202. Queue a run; unknown workflow/incident → 404, incident not `NEW` → 409 ✅ |
