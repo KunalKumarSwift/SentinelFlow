@@ -21,7 +21,8 @@ Environment:
     AUTH_MODE (default: "hs256"; "oidc" = Keycloak), OIDC_ISSUER, OIDC_AUDIENCE
     (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint),
     POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL,
-    ACCESS_REVIEW_TENANTS (default: "acme"; comma-separated).
+    ACCESS_REVIEW_TENANTS (default: "acme"; comma-separated),
+    NOTIFY_WEBHOOK_URL (unset = no chat notifications), NOTIFY_STYLE ("slack" / "discord").
 """
 
 from typing import Literal, Self
@@ -61,6 +62,8 @@ class Settings(BaseSettings):
     policy_engine: Literal["incode", "opa"] = "incode"
     opa_url: str = "http://localhost:8181"
     access_review_tenants: str = "acme"
+    notify_webhook_url: SecretStr | None = None
+    notify_style: Literal["slack", "discord"] = "slack"
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:
