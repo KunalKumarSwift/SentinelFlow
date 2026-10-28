@@ -22,7 +22,8 @@ Environment:
     (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint),
     POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL,
     ACCESS_REVIEW_TENANTS (default: "acme"; comma-separated),
-    NOTIFY_WEBHOOK_URL (unset = no chat notifications), NOTIFY_STYLE ("slack" / "discord").
+    NOTIFY_WEBHOOK_URL (unset = no chat notifications), NOTIFY_STYLE ("slack" / "discord"),
+    TICKETING_BACKEND ("store" = memory/Postgres; "github" needs GITHUB_REPO, GITHUB_TOKEN).
 """
 
 from typing import Literal, Self
@@ -64,6 +65,9 @@ class Settings(BaseSettings):
     access_review_tenants: str = "acme"
     notify_webhook_url: SecretStr | None = None
     notify_style: Literal["slack", "discord"] = "slack"
+    ticketing_backend: Literal["store", "github"] = "store"
+    github_repo: str | None = None
+    github_token: SecretStr | None = None
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:
@@ -73,6 +77,8 @@ class Settings(BaseSettings):
             raise ValueError("STORAGE_BACKEND=postgres requires DATABASE_URL")
         if self.intel_backend == "abuseipdb" and self.abuseipdb_api_key is None:
             raise ValueError("INTEL_BACKEND=abuseipdb requires ABUSEIPDB_API_KEY")
+        if self.ticketing_backend == "github" and not (self.github_repo and self.github_token):
+            raise ValueError("TICKETING_BACKEND=github requires GITHUB_REPO and GITHUB_TOKEN")
         if self.auth_mode == "oidc" and not self.oidc_issuer:
             raise ValueError("AUTH_MODE=oidc requires OIDC_ISSUER")
         shared = self.storage_backend == "postgres" and self.queue_backend == "redis"

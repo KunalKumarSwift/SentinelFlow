@@ -19,6 +19,7 @@ from sentinelflow.core.config import Settings
 from sentinelflow.facades.llm_facade import make_llm
 from sentinelflow.facades.policy_facade import make_policy_engine
 from sentinelflow.facades.shared_state_facade import make_run_queue, make_token_budget
+from sentinelflow.facades.ticketing_facade import make_ticketing
 from sentinelflow.facades.tracing_facade import make_tracer
 from sentinelflow.providers.llm.budgeted_llm import BudgetedLLM
 from sentinelflow.providers.metrics.counting_audit_store import CountingAuditStore
@@ -79,4 +80,5 @@ def _stores(settings: Settings, metrics: PrometheusMetrics) -> Stores:
     else:
         stores = memory_stores(clock, queue)
     # Every audit append (policy denials included) is counted, whoever writes it.
-    return replace(stores, audit=CountingAuditStore(stores.audit, metrics))
+    audit = CountingAuditStore(stores.audit, metrics)
+    return replace(stores, audit=audit, ticketing=make_ticketing(settings, stores.ticketing))

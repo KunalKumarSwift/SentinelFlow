@@ -67,3 +67,13 @@ def test_abuseipdb_intel_requires_an_api_key(monkeypatch: pytest.MonkeyPatch) ->
         load_settings()
     monkeypatch.setenv("ABUSEIPDB_API_KEY", "k" * 80)
     assert load_settings().intel_backend == "abuseipdb"
+
+
+def test_github_ticketing_requires_repo_and_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    monkeypatch.setenv("TICKETING_BACKEND", "github")
+    monkeypatch.setenv("GITHUB_REPO", "acme-sec/incidents")
+    with pytest.raises(ValidationError, match="GITHUB_TOKEN"):
+        load_settings()
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_x")
+    assert load_settings().ticketing_backend == "github"
