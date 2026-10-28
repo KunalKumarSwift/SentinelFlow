@@ -81,7 +81,7 @@ Defaults: ingest 50 req/s, others 20 req/s. Exceeding returns 429 with `Retry-Af
 
 `BudgetTracker` wraps every `LLMProvider` call:
 
-1. Before the call: if `used_today(tenant) >= budget` → `BudgetExceeded` (graph routes to
+1. Before the call: if `used_today(tenant) >= budget` → `BudgetExceededError` (graph routes to
    `NEEDS_REVIEW` / human, never silently skips security steps).
 2. After the call: add `usage.input_tokens + usage.output_tokens`.
 

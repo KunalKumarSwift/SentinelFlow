@@ -94,7 +94,7 @@ def decide(approval_id: str, body: DecisionIn, principal: Principal) -> Approval
     decision = policy.evaluate(request)
     audit.record_policy(decision, request)
     if not decision.allowed:
-        raise PolicyDenied(decision.reason)
+        raise PolicyDeniedError(decision.reason)
     updated = record_decision(approval, ApprovalDecision(principal.subject, body.approved, body.reason, clock.now()))
     approvals.update(updated)
     queue.publish(ResumeRun(run_id=approval.run_id, approval_id=approval.id))
