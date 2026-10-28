@@ -1,5 +1,9 @@
 """Build the lifecycle graph (triage, investigation, approvals, containment) for one process."""
 
+from dataclasses import dataclass
+
+from opentelemetry.trace import Tracer
+
 from sentinelflow.bootstrap._stores import Stores
 from sentinelflow.contracts.llm import LLMProvider
 from sentinelflow.core.ids import UuidIdFactory
@@ -18,10 +22,19 @@ from sentinelflow.workflows.registry import DEFAULT_REGISTRY
 from sentinelflow.workflows.triage import TriageDeps, build_triage_graph
 
 
-def build_lifecycle(
-    stores: Stores, llm: LLMProvider, redactor: Redactor, demo_seed: int
-) -> LifecycleGraph:
+@dataclass(frozen=True, slots=True)
+class Services:
+    """Process-wide collaborators of the lifecycle besides storage."""
+
+    llm: LLMProvider
+    redactor: Redactor
+    tracer: Tracer
+    demo_seed: int
+
+
+def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
     """Return the lifecycle graph wired to mock providers seeded for the demo."""
+    llm, redactor, demo_seed = services.llm, services.redactor, services.demo_seed
     seed = demo_seed_data(demo_seed)
     identity = MockIdentity(seed.users)
     triage = build_triage_graph(TriageDeps(MockThreatIntel(seed.ip_reputations), identity, llm))
@@ -46,5 +59,6 @@ def build_lifecycle(
         audit=stores.audit,
         ticketing=stores.ticketing,
         redactor=redactor,
+        tracer=services.tracer,
     )
     return build_lifecycle_graph(deps, stores.checkpointer)

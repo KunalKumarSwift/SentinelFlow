@@ -4,7 +4,8 @@
 #   uv run python scripts/smoke_test.py --api http://127.0.0.1:8000
 #
 # `--profile llm` also starts Ollama (set LLM_BACKEND=ollama to use it);
-# `--profile observability` adds Prometheus (:9090) and Grafana (:3000, dashboard provisioned).
+# `--profile observability` adds Prometheus (:9090), Grafana (:3000, dashboard provisioned)
+# and Jaeger (:16686); run it with OTLP_ENDPOINT=http://jaeger:4318 to send traces.
 
 x-app: &app
   build: .
@@ -17,6 +18,7 @@ x-app: &app
     REDIS_URL: redis://redis:6379/0
     LLM_BACKEND: ${LLM_BACKEND:-none}
     OLLAMA_URL: http://ollama:11434
+    OTLP_ENDPOINT: ${OTLP_ENDPOINT:-}
   depends_on:
     postgres: { condition: service_healthy }
     redis: { condition: service_healthy }
@@ -70,6 +72,11 @@ services:
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ["3000:3000"]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.63.0
+    profiles: [observability]
+    ports: ["16686:16686"]
 
   ollama:
     image: ollama/ollama:0.5.4

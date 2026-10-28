@@ -154,6 +154,12 @@ approvals, action execution.
   worker binds `run_id`, `tenant_id`, command and attempt around each delivery and logs
   `run.command.done` / `.retry` / `.dead_lettered`. `LOG_FORMAT=json|console`.
 - **Traces:** OpenTelemetry → Jaeger; LLM traces → Langfuse (self-hosted).
+  *Built (3.5):* the worker opens a `run.command <type>` span per delivery and every
+  lifecycle step runs in a child span `lifecycle.<step>` tagged with run, tenant and
+  incident (`workflows/orchestrator/tracing.py`); a pause for approval is marked
+  `interrupted=True`, not an error. `facades/tracing_facade.py` exports over OTLP/HTTP when
+  `OTLP_ENDPOINT` is set (Jaeger in the Compose `observability` profile) and is a no-op
+  otherwise. Tracers are injected, never global. The Langfuse callback is not built yet.
 - **Metrics:** Prometheus (`runs_total`, `run_duration_seconds`, `queue_depth`,
   `policy_denials_total`, `llm_tokens_total`) → Grafana dashboard.
   *Built (3.6):* behind `contracts/metrics.Metrics` (`PrometheusMetrics` on a per-process

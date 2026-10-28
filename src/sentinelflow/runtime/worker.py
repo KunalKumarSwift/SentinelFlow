@@ -11,6 +11,8 @@ Failure policy:
 import time
 from collections.abc import Callable
 
+from opentelemetry.trace import NoOpTracer, Tracer
+
 from sentinelflow.contracts.metrics import Metrics
 from sentinelflow.contracts.run_queue import Delivery, RunCommand, RunQueue
 from sentinelflow.core.logging import bound, get_logger
@@ -32,11 +34,13 @@ class Worker:
         *,
         max_attempts: int = 5,
         metrics: Metrics | None = None,
+        tracer: Tracer | None = None,
     ) -> None:
         """Create a worker identified as ``consumer`` on the queue."""
         self._queue, self._handler, self._consumer = queue, handler, consumer
         self._max_attempts = max_attempts
         self._metrics = metrics or NullMetrics()
+        self._tracer = tracer or NoOpTracer()
 
     def run_once(self) -> int:
         """Claim and process one batch; return how many deliveries were processed."""
@@ -49,7 +53,11 @@ class Worker:
         command = delivery.command
         context = {"run_id": command.run_id, "tenant_id": command.tenant_id}
         started, name = time.perf_counter(), type(command).__name__
-        with bound(**context, command=name, attempt=delivery.attempt):
+        span_attributes = {**context, "attempt": delivery.attempt}
+        with (
+            bound(**context, command=name, attempt=delivery.attempt),
+            self._tracer.start_as_current_span(f"run.command {name}", attributes=span_attributes),
+        ):
             try:
                 self._handler(command)
             # Broad on purpose: this boundary classifies every failure as retry or dead-letter.

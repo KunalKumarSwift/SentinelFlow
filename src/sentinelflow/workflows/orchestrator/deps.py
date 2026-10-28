@@ -1,6 +1,8 @@
 """Dependencies of the lifecycle graph."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from opentelemetry.trace import NoOpTracer, Tracer
 
 from sentinelflow.contracts.approvals import ApprovalRepository
 from sentinelflow.contracts.audit_store import AuditStore
@@ -25,6 +27,7 @@ class LifecycleDeps:
 
     Attributes:
         containment_scope: ``max_scope`` of the registered containment workflow.
+        tracer: OpenTelemetry tracer for step spans; no-op unless tracing is configured.
     """
 
     incidents: IncidentRepository
@@ -43,3 +46,4 @@ class LifecycleDeps:
     audit: AuditStore
     ticketing: TicketingProvider
     redactor: Redactor
+    tracer: Tracer = field(default_factory=NoOpTracer)
