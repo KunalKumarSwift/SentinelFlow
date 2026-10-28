@@ -14,6 +14,9 @@ tests/fakes/fake_intel.py   → FakeThreatIntel (in-memory dict, records calls)
 
 ## 1. Protocols
 
+Methods are added when the first slice needs them (Phase 1 has `ip_reputation` and
+`lookup_user`); each addition extends the shared contract tests in `tests/contracts/`.
+
 ```python
 class LLMProvider(Protocol):
     def structured(self, prompt: Prompt, schema: type[T]) -> T: ...
@@ -85,8 +88,8 @@ produced by the simulator, so a scenario's intel, users and events are consisten
 
 | Mock | Behaviour |
 |---|---|
-| `MockThreatIntel` | Known-bad IPs from the scenario score 85–100; everything else 0–20 |
-| `MockIdentity` | In-memory directory; `apply()` flips flags (`disabled`, `mfa_reset`) and is idempotent per key |
+| `MockThreatIntel` | Serves the scenario's `IpReputation`s (known-bad IPs score 85–100); unknown IPs return `None` ("no intel", never a made-up score) |
+| `MockIdentity` | In-memory directory served from seed data; unknown users return `None`. `apply()` (Phase 2) flips flags (`disabled`, `mfa_reset`) and is idempotent per key |
 | `MemoryEventStore` | Holds the scenario's raw events; filters by entity and time window |
 | `MemoryTicketing` | Dict of tickets; returns `TCK-0001` style IDs |
 | `ConsoleNotifier` | Logs the message |
