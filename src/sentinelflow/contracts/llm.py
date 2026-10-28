@@ -18,12 +18,15 @@ class Prompt:
     Attributes:
         name: Stable id such as ``"triage.classify"``; used for tracing and test scripts.
         untrusted: Attacker-influenced values, rendered as data only.
+        tenant_id: Tenant the call is made for; charged against its daily token budget.
+            Trusted metadata, never sent to the model.
     """
 
     name: str
     system: str
     instructions: str
     untrusted: Mapping[str, str] = field(default_factory=dict[str, str])
+    tenant_id: str = ""
 
 
 class LLMProvider(Protocol):

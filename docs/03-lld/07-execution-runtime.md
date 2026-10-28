@@ -95,6 +95,13 @@ invalid) is deterministic → dead-lettered immediately.
 Fixed-window counter per tenant and route group (`ingest`, `read`, `write`) in Redis.
 Defaults: ingest 50 req/s, others 20 req/s. Exceeding returns 429 with `Retry-After`.
 
+**As built (3.3):** `security/throttle.py` (`route_group`, `DEFAULT_LIMITS`, `Throttle`) runs
+inside `Auth.current_principal` right after the token is verified, so the tenant comes from
+the token, never the request. Counters sit behind `contracts/rate_limit.RateLimiter`:
+`MemoryRateLimiter` per process, `RedisRateLimiter` (`sf:ratelimit:{tenant}:{group}:{window}`,
+`INCR` + `PEXPIRE`) when `QUEUE_BACKEND=redis`, so all API replicas share one limit.
+Unauthenticated routes (health, dev-token) are not throttled.
+
 ## 6. LLM budget
 
 `BudgetTracker` wraps every `LLMProvider` call:
@@ -105,6 +112,15 @@ Defaults: ingest 50 req/s, others 20 req/s. Exceeding returns 429 with `Retry-Af
 
 Implemented as a decorator provider (`BudgetedLLM(inner: LLMProvider, tracker)`) — the
 open/closed principle in action: no workflow code changes.
+
+**As built (3.3):** `providers/llm/budgeted_llm.py` charges each call to `Prompt.tenant_id`
+(trusted metadata set by every prompt builder) **before** calling the model, using an
+estimate (prompt characters / 4 + a 1 024-token output allowance); exact provider usage
+can replace the estimate later without changing callers. `BudgetExceededError` is a
+permanent `ProviderError`, so the existing fail-safe paths apply (triage → NEEDS_REVIEW,
+investigation → playbook defaults, report → verified facts only). Budgets live behind
+`contracts/token_budget.TokenBudget`: memory, or Redis `sf:budget:{tenant}:{yyyymmdd}`
+(`INCRBY`, rolled back with `DECRBY` on overshoot, 48 h TTL).
 
 ## 7. Scaling model
 

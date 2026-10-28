@@ -28,4 +28,4 @@ def analyse_prompt(state: AnalyseInput) -> Prompt:
     )
     timeline = "\n".join(e.summary for e in state["timeline"])
     untrusted = {"rule_id": alert.rule_id, "alert_raw": repr(dict(alert.raw)), "timeline": timeline}
-    return Prompt("investigation.analyse", SYSTEM, instructions, untrusted)
+    return Prompt("investigation.analyse", SYSTEM, instructions, untrusted, alert.tenant_id)

@@ -16,7 +16,8 @@ def make_report_step(deps: LifecycleDeps) -> Step:
         incident = load_incident(deps, state)
         approvals = deps.approvals.for_run(incident.tenant_id, state["run_id"])
         events = read_all(deps.audit, incident.tenant_id)
-        body = write_report(deps.llm, collect_facts(incident, approvals, events, deps.redactor))
+        facts = collect_facts(incident, approvals, events, deps.redactor)
+        body = write_report(deps.llm, facts, incident.tenant_id)
         title = f"[{incident.severity}] {incident.id} {incident.status.value}"
         ticket = deps.ticketing.upsert(incident.tenant_id, incident.id, title, body)
         if incident.status is IncidentStatus.CONTAINED:

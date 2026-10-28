@@ -15,6 +15,7 @@ from sentinelflow.domain.errors import (
     InvalidTransitionError,
     NotFoundError,
     ProviderError,
+    RateLimitedError,
     SentinelFlowError,
 )
 
@@ -26,22 +27,32 @@ _STATUS: list[tuple[type[SentinelFlowError], int, str]] = [
     (InvalidTransitionError, 409, "Conflict"),
     (ConflictError, 409, "Conflict"),
     (DomainError, 422, "Unprocessable Content"),
+    (RateLimitedError, 429, "Too Many Requests"),
     (ProviderError, 503, "Service Unavailable"),
 ]
 
 
-def problem(status: int, title: str, detail: str) -> JSONResponse:
+def problem(
+    status: int, title: str, detail: str, headers: dict[str, str] | None = None
+) -> JSONResponse:
     """Return a problem-details response."""
     body = {"type": "about:blank", "title": title, "status": status, "detail": detail}
-    headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+    if status == 401:
+        headers = {"WWW-Authenticate": "Bearer"}
     return JSONResponse(body, status, headers, media_type="application/problem+json")
 
 
 def _handle(_: Request, exc: Exception) -> JSONResponse:
     for error_type, status, title in _STATUS:
         if isinstance(exc, error_type):
-            return problem(status, title, str(exc))
+            return problem(status, title, str(exc), _extra_headers(exc))
     return problem(500, "Internal Server Error", "unexpected error")
+
+
+def _extra_headers(exc: Exception) -> dict[str, str] | None:
+    if isinstance(exc, RateLimitedError):
+        return {"Retry-After": str(exc.retry_after)}
+    return None
 
 
 def install(app: FastAPI) -> None:

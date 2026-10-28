@@ -87,7 +87,7 @@ class IncidentOut(BaseModel):
 | 404 | `NotFoundError` | Not found **or** not visible to caller (avoid leaking existence across tenants) |
 | 409 | `InvalidTransitionError` (later `ConflictError`) | Illegal state transition, approval already decided |
 | 422 | Pydantic validation, `DomainError` | Malformed body; invalid value; unknown rule |
-| 429 | (Phase 3) | Rate limit or LLM budget exceeded |
+| 429 (+ `Retry-After`) | `RateLimitedError` | Tenant exceeded its per-second limit for the route group ✅ |
 | 503 | `ProviderError` | An external provider failed |
 | 500 | anything else | Generic `detail: "unexpected error"`; internal messages are never leaked |
 
