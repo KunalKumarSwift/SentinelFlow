@@ -10,17 +10,25 @@ code disposes**, **everything audited**.
 | 1–3 | HS256 JWT signed with a dev secret. `POST /v1/auth/dev-token` exists **only** when `APP_ENV=dev` |
 | 4 | RS256 JWT from Keycloak (OIDC). Public keys fetched from JWKS and cached; `iss` and `aud` validated |
 
-Required claims: `sub`, `tenant_id`, `team`, `roles` (list), `exp` (≤ 15 min), `iat`,
-`kind` (`user` / `service`). `security/tokens.py` exposes one function:
+Required claims: `sub`, `tenant_id`, `team`, `roles` (list of strings), `kind` (`user` /
+`service`), `iss` (= `sentinelflow`), `iat`, `exp`. `security/tokens.py` exposes:
 
 ```python
-def principal_from_token(token: str, verifier: TokenVerifier) -> Principal:
-    """Verify a bearer token and convert its claims into a Principal.
-
-    Raises:
-        AuthenticationError: If the signature, expiry, issuer or claims are invalid.
-    """
+class Hs256TokenService:
+    def __init__(self, secret: str, clock: Clock, ttl: timedelta = MAX_LIFETIME) -> None: ...
+    def issue(self, principal: Principal) -> str: ...
+    def verify(self, token: str) -> Principal:  # raises AuthenticationError
+        ...
 ```
+
+Verification rules:
+
+- Only `HS256` is accepted, so `alg: none` and algorithm-confusion tokens fail.
+- Signature and issuer are checked by PyJWT; every PyJWT call lives in `security/_jwt.py`.
+- `exp - iat` must be ≤ 15 minutes, so long-lived tokens are rejected even if correctly signed.
+- Expiry is compared with the injected `Clock`, not the wall clock, so tests are deterministic.
+- Secrets shorter than 32 characters are refused at construction.
+- Claims are type-checked (`roles` must be a list of strings; unknown `kind` is rejected).
 
 ## 2. Permissions
 
