@@ -182,9 +182,10 @@ hash_0 = SHA256("sentinelflow-genesis:" + tenant_id)
 
 ## 8. Data protection
 
-- `security/redaction.py`: `redact_incident(incident, principal) -> Incident` replaces user
-  identifiers with a stable pseudonym (`user-7f3a…`, HMAC of the value) unless the principal
-  has `incident:read_pii`.
+- `security/redaction.py`: `Redactor.entities_for(principal, entities)` replaces `user` and
+  `email_id` with stable pseudonyms (`user-7f3a…`, HMAC-SHA256 of field + value) unless the
+  principal has `incident:read_pii`. The key is derived from the deployment secret with
+  domain separation (`sentinelflow:pii:`), never the token-signing secret itself.
 - LLM prompts always use the redacted view; the mapping back to real IDs stays in code.
 - Secrets live in environment variables loaded by `core/config.py`; never logged (pydantic `SecretStr`).
 

@@ -15,7 +15,7 @@ def seeded(client: TestClient, auth: TokenFor) -> TestClient:
 
 
 def test_get_incident_returns_details(seeded: TestClient, auth: TokenFor) -> None:
-    response = seeded.get("/v1/incidents/inc-0001", headers=auth("soc-analyst-l1"))
+    response = seeded.get("/v1/incidents/inc-0001", headers=auth("soc-analyst-l2"))
     assert response.status_code == 200
     body = response.json()
     assert (body["status"], body["severity"], body["team"]) == ("new", "medium", "soc-emea")

@@ -4,6 +4,7 @@ Phase 1 supports in-memory storage and queue and mock intel/identity only; other
 backends are rejected here so a misconfiguration fails at start-up, not mid-run.
 """
 
+import hashlib
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -21,6 +22,7 @@ from sentinelflow.providers.storage.memory_incidents import MemoryIncidentReposi
 from sentinelflow.runtime.start_handler import StartRunHandler
 from sentinelflow.runtime.worker import Worker
 from sentinelflow.security.audit_recorder import AuditRecorder
+from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.simulator.demo_seed import demo_seed_data
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
@@ -40,6 +42,14 @@ class Runtime:
     worker: Worker
 
 
+@dataclass(frozen=True, slots=True)
+class _Stores:
+    alerts: MemoryAlertRepository
+    incidents: MemoryIncidentRepository
+    audit: MemoryAuditStore
+    queue: MemoryRunQueue
+
+
 def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     """Wire every component for single-process mode.
 
@@ -47,21 +57,48 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
         ValueError: If settings ask for a backend that Phase 1 does not provide.
     """
     _require_phase_one_backends(settings)
-    clock, ids = SystemClock(), UuidIdFactory()
-    alerts, incidents = MemoryAlertRepository(), MemoryIncidentRepository()
-    queue, audit = MemoryRunQueue(clock, VISIBILITY_TIMEOUT), MemoryAuditStore()
+    clock = SystemClock()
+    stores = _Stores(
+        MemoryAlertRepository(),
+        MemoryIncidentRepository(),
+        MemoryAuditStore(),
+        MemoryRunQueue(clock, VISIBILITY_TIMEOUT),
+    )
+    worker = _worker(settings, stores, clock, demo_seed)
+    return Runtime(_container(settings, stores, clock), worker)
+
+
+def _worker(settings: Settings, stores: _Stores, clock: SystemClock, demo_seed: int) -> Worker:
     seed = demo_seed_data(demo_seed)
-    triage = TriageDeps(
-        MockThreatIntel(seed.ip_reputations), MockIdentity(seed.users), make_llm(settings)
+    intel, identity = MockThreatIntel(seed.ip_reputations), MockIdentity(seed.users)
+    graph = build_lifecycle_graph(
+        build_triage_graph(TriageDeps(intel, identity, make_llm(settings)))
     )
-    graph = build_lifecycle_graph(build_triage_graph(triage))
-    handler = StartRunHandler(alerts, incidents, graph, AuditRecorder(audit, clock))
-    ingestion = IngestionService(IngestionDeps(alerts, incidents, ids, clock, DEFAULT_TEAM))
-    tokens = Hs256TokenService(settings.jwt_secret.get_secret_value(), clock)
-    container = ApiContainer(
-        settings.app_env, tokens, ingestion, incidents, DEFAULT_REGISTRY, queue, ids, audit, clock
+    recorder = AuditRecorder(stores.audit, clock)
+    handler = StartRunHandler(stores.alerts, stores.incidents, graph, recorder)
+    return Worker(stores.queue, handler, "worker-1")
+
+
+def _container(settings: Settings, stores: _Stores, clock: SystemClock) -> ApiContainer:
+    ids, secret = UuidIdFactory(), settings.jwt_secret.get_secret_value()
+    deps = IngestionDeps(stores.alerts, stores.incidents, ids, clock, DEFAULT_TEAM)
+    return ApiContainer(
+        app_env=settings.app_env,
+        tokens=Hs256TokenService(secret, clock),
+        ingestion=IngestionService(deps),
+        incidents=stores.incidents,
+        registry=DEFAULT_REGISTRY,
+        queue=stores.queue,
+        ids=ids,
+        audit=stores.audit,
+        clock=clock,
+        redactor=Redactor(_derive_key(secret, "pii")),
     )
-    return Runtime(container, Worker(queue, handler, "worker-1"))
+
+
+def _derive_key(secret: str, purpose: str) -> bytes:
+    # Domain separation: the token-signing secret is never used directly for pseudonyms.
+    return hashlib.sha256(f"sentinelflow:{purpose}:{secret}".encode()).digest()
 
 
 def _require_phase_one_backends(settings: Settings) -> None:
