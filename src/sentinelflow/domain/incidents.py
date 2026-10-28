@@ -1,6 +1,6 @@
 """Incidents: one or more related alerts that are triaged and handled together."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
 
@@ -52,3 +52,10 @@ class Incident:
         require_aware(self.created_at, "created_at")
         if not self.alert_ids:
             raise InvalidValueError("alert_ids must contain at least one alert id")
+
+
+def with_alert(incident: Incident, alert_id: str) -> Incident:
+    """Return a copy of ``incident`` that also groups ``alert_id`` (idempotent)."""
+    if alert_id in incident.alert_ids:
+        return incident
+    return replace(incident, alert_ids=(*incident.alert_ids, alert_id))
