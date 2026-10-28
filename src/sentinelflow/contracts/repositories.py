@@ -31,6 +31,10 @@ class AlertRepository(Protocol):
         """Return the most recently observed alert with ``fingerprint``, if any."""
         ...
 
+    def get(self, tenant_id: str, alert_id: str) -> StoredAlert | None:
+        """Return the stored alert, or ``None`` if absent or owned by another tenant."""
+        ...
+
 
 class IncidentRepository(Protocol):
     """Store of incidents, keyed by tenant and id."""
