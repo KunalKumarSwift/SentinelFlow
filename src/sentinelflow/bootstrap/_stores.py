@@ -16,6 +16,7 @@ from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository
 from sentinelflow.contracts.run_queue import RunQueue
 from sentinelflow.contracts.runs import RunRepository
+from sentinelflow.contracts.ticketing import TicketingProvider
 from sentinelflow.core.clock import Clock
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
 from sentinelflow.providers.storage.memory_approvals import MemoryApprovalRepository
@@ -38,7 +39,7 @@ class Stores:
     runs: RunRepository
     audit: AuditStore
     checkpointer: BaseCheckpointSaver[str]
-    ticketing: MemoryTicketing
+    ticketing: TicketingProvider
     queue: RunQueue
 
 

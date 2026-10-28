@@ -12,7 +12,8 @@ Environment:
     STORAGE_BACKEND (default: "memory"), DATABASE_URL,
     QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
     INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000),
-    API_HOST (default: "127.0.0.1"), API_PORT (default: 8000).
+    API_HOST (default: "127.0.0.1"), API_PORT (default: 8000),
+    RUN_WORKER_IN_API (default: true; false needs Postgres storage and a Redis queue).
 """
 
 from typing import Literal, Self
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
     tenant_token_budget_daily: int = Field(default=200_000, gt=0)
     api_host: str = "127.0.0.1"
     api_port: int = Field(default=8000, gt=0, lt=65536)
+    run_worker_in_api: bool = True
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:
@@ -47,6 +49,12 @@ class Settings(BaseSettings):
             raise ValueError("LLM_BACKEND=anthropic requires ANTHROPIC_API_KEY")
         if self.storage_backend == "postgres" and self.database_url is None:
             raise ValueError("STORAGE_BACKEND=postgres requires DATABASE_URL")
+        shared = self.storage_backend == "postgres" and self.queue_backend == "redis"
+        if not self.run_worker_in_api and not shared:
+            # Separate workers only see work through a shared database and queue.
+            raise ValueError(
+                "RUN_WORKER_IN_API=false requires STORAGE_BACKEND=postgres and QUEUE_BACKEND=redis"
+            )
         return self
 
 

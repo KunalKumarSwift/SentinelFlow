@@ -72,3 +72,14 @@ create table if not exists audit_events (
   hash       char(64) not null,
   primary key (tenant_id, seq)
 );
+
+-- Post-incident report tickets (the "ticketing system" until a real one is plugged in).
+create sequence if not exists ticket_seq;
+create table if not exists tickets (
+  tenant_id    text not null,
+  incident_id  text not null,
+  id           text not null,
+  title        text not null,
+  body         text not null,
+  primary key (tenant_id, incident_id)
+);

@@ -6,7 +6,15 @@ from pydantic import ValidationError
 from sentinelflow.core.config import load_settings
 
 SECRET = "s" * 32
-MANAGED_VARS = ("JWT_SECRET", "LLM_BACKEND", "ANTHROPIC_API_KEY", "STORAGE_BACKEND", "DATABASE_URL")
+MANAGED_VARS = (
+    "JWT_SECRET",
+    "LLM_BACKEND",
+    "ANTHROPIC_API_KEY",
+    "STORAGE_BACKEND",
+    "DATABASE_URL",
+    "QUEUE_BACKEND",
+    "RUN_WORKER_IN_API",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -66,3 +74,26 @@ def test_postgres_storage_requires_database_url(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("STORAGE_BACKEND", "postgres")
     with pytest.raises(ValidationError, match="DATABASE_URL"):
         load_settings()
+
+
+def test_api_without_worker_requires_shared_storage_and_queue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    monkeypatch.setenv("RUN_WORKER_IN_API", "false")
+    with pytest.raises(ValidationError, match="QUEUE_BACKEND=redis"):
+        load_settings()
+
+
+def test_api_without_worker_is_allowed_with_postgres_and_redis(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name, value in {
+        "JWT_SECRET": SECRET,
+        "RUN_WORKER_IN_API": "false",
+        "STORAGE_BACKEND": "postgres",
+        "DATABASE_URL": "postgresql://db/sf",
+        "QUEUE_BACKEND": "redis",
+    }.items():
+        monkeypatch.setenv(name, value)
+    assert load_settings().run_worker_in_api is False

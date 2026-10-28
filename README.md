@@ -72,6 +72,17 @@ STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/sent
 APP_ENV=dev JWT_SECRET=change-me-to-32-or-more-characters uv run sentinelflow-api
 ```
 
+### Run scaled out (Docker Compose)
+
+```bash
+docker compose up --build --scale worker=3       # API + 3 workers + Postgres + Redis
+uv run python scripts/smoke_test.py               # alert in → run paused for approval
+```
+
+The API process only serves HTTP (`RUN_WORKER_IN_API=false`); `sentinelflow-worker`
+processes share the work through Redis and resume each other's paused runs from
+PostgreSQL checkpoints.
+
 Choose an LLM for real verdicts:
 
 | `LLM_BACKEND` | Cost | Extra settings |

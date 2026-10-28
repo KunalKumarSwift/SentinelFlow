@@ -1,0 +1,65 @@
+# Scaled-out SentinelFlow: one API, N workers, PostgreSQL and Redis.
+#
+#   docker compose up --build --scale worker=3
+#   uv run python scripts/smoke_test.py --api http://127.0.0.1:8000
+#
+# `docker compose --profile llm up` also starts Ollama; set LLM_BACKEND=ollama to use it.
+
+x-app: &app
+  build: .
+  environment: &env
+    APP_ENV: dev
+    JWT_SECRET: ${JWT_SECRET:-change-me-in-production-32-chars-min}
+    STORAGE_BACKEND: postgres
+    DATABASE_URL: postgresql://sentinel:sentinel@postgres:5432/sentinelflow
+    QUEUE_BACKEND: redis
+    REDIS_URL: redis://redis:6379/0
+    LLM_BACKEND: ${LLM_BACKEND:-none}
+    OLLAMA_URL: http://ollama:11434
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  api:
+    <<: *app
+    environment:
+      <<: *env
+      RUN_WORKER_IN_API: "false"
+    ports: ["8000:8000"]
+
+  worker:
+    <<: *app
+    command: ["sentinelflow-worker"]
+    deploy: { replicas: 2 }
+    # SIGTERM lets a worker finish its batch; unfinished commands reappear after 60 s.
+    stop_grace_period: 30s
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinelflow
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:0.5.4
+    profiles: [llm]
+    volumes: [ollama:/root/.ollama]
+
+volumes:
+  pgdata:
+  ollama:

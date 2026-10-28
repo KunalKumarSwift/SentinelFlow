@@ -1,9 +1,10 @@
-"""``sentinelflow-api``: run the API and a background worker in one process.
+"""``sentinelflow-api``: serve the API, by default with a background worker thread.
 
     APP_ENV=dev JWT_SECRET=$(python -c 'print("x"*32)') uv run sentinelflow-api
 
 Environment: everything in ``core/config.py``; ``API_HOST`` (default 127.0.0.1) and
-``API_PORT`` (default 8000) choose the bind address.
+``API_PORT`` (default 8000) choose the bind address. With ``RUN_WORKER_IN_API=false``
+the process only serves HTTP and ``sentinelflow-worker`` processes do the work.
 """
 
 import threading
@@ -35,9 +36,11 @@ def main() -> None:  # pragma: no cover -- process entry point, covered by the R
     runtime = build_runtime(settings)
     stop = threading.Event()
     thread = threading.Thread(target=work_until, args=(runtime.worker, stop), daemon=True)
-    thread.start()
+    if settings.run_worker_in_api:
+        thread.start()
     try:
         uvicorn.run(create_app(runtime.container), host=settings.api_host, port=settings.api_port)
     finally:
         stop.set()
-        thread.join(timeout=5)
+        if thread.is_alive():
+            thread.join(timeout=5)
