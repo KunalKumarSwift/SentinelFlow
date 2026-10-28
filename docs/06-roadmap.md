@@ -24,7 +24,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.5 ✅ | Simulator core + `brute_force` + `benign` | Same seed → identical output; expected fields set |
 | 1.6 ✅ | Protocols + fakes + `MockThreatIntel`, `MockIdentity` | Contract tests for intel and identity |
 | 1.7 ✅ | Permissions, roles, RBAC check | Generated RBAC matrix tests |
-| 1.8 | `Principal` from HS256 JWT | Valid; expired; bad signature; missing claim |
+| 1.8 ✅ | `Principal` from HS256 JWT | Valid; expired; bad signature; missing claim |
 | 1.9 | Ingestion service (dedup + incident upsert) | New alert → new incident; duplicate → merged |
 | 1.10 | Triage graph with `FakeLLM` | Brute-force → HIGH/TP; benign → FP closed; invalid LLM output → NEEDS_REVIEW |
 | 1.11 | Workflow registry + orchestrator (triage only) | Unknown workflow rejected; permission required |

@@ -23,3 +23,7 @@ class UnknownRuleError(DomainError):
 
 class InvalidTransitionError(DomainError):
     """An incident was asked to move to a status its lifecycle does not allow."""
+
+
+class AuthenticationError(SentinelFlowError):
+    """A credential is missing, malformed, expired or not trusted (HTTP 401)."""
