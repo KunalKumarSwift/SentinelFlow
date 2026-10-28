@@ -54,8 +54,9 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 2.8b ✅ | Lifecycle: investigation + containment with `interrupt` and a checkpointer | Pauses; resumes; executes only with quorum |
 | 2.9 ✅ | Approvals API + resume command; run records + `GET /v1/runs/{id}` | SoD, self-action, distinct approvers, 409 on decided |
 | 2.10 ✅ | Report step + ticketing (facts from the audit trail) | Report contains facts; ticket created |
-| 2.11 | PostgreSQL repositories + Postgres checkpointer | Contract tests run against memory and Postgres (testcontainers) |
 | 2.12 ✅ | Remaining simulator scenarios | Each scenario's `expected` met end-to-end (graph level) |
+| 2.11a ✅ | PostgreSQL repositories (incidents, alerts, approvals, runs, audit) | Contract tests run against memory and Postgres (CI service container) |
+| 2.11b | Postgres checkpointer + `STORAGE_BACKEND=postgres` wiring | Lifecycle resumes from a Postgres checkpoint |
 
 **Demo:** leaked-key scenario → commander + second approver → key revoked → report; audit verifies.
 

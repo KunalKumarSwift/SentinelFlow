@@ -8,16 +8,31 @@ import pytest
 from sentinelflow.contracts.approvals import ApprovalRepository
 from sentinelflow.contracts.runs import RunRepository
 from sentinelflow.domain.actions import ActionKind, ProposedAction
-from sentinelflow.domain.approvals import Approval, ApprovalStatus, new_approval
+from sentinelflow.domain.approvals import (
+    Approval,
+    ApprovalDecision,
+    ApprovalStatus,
+    new_approval,
+    record_decision,
+)
 from sentinelflow.domain.runs import RunRecord, RunStatus
 from sentinelflow.domain.severity import Severity
 from sentinelflow.providers.storage.memory_approvals import MemoryApprovalRepository
 from sentinelflow.providers.storage.memory_runs import MemoryRunRepository
+from sentinelflow.providers.storage.postgres.pg_approvals import PgApprovalRepository
+from sentinelflow.providers.storage.postgres.pg_runs import PgRunRepository
 from sentinelflow.security.system_principals import orchestrator_for
 from tests.builders import T0
+from tests.contracts.pg import fresh_pool
 
-APPROVALS: list[Callable[[], ApprovalRepository]] = [MemoryApprovalRepository]
-RUNS: list[Callable[[], RunRepository]] = [MemoryRunRepository]
+APPROVALS: list[Callable[[], ApprovalRepository]] = [
+    MemoryApprovalRepository,
+    lambda: PgApprovalRepository(fresh_pool()),
+]
+RUNS: list[Callable[[], RunRepository]] = [
+    MemoryRunRepository,
+    lambda: PgRunRepository(fresh_pool()),
+]
 
 
 def _approval(n: int, run: str = "run-1", tenant: str = "acme") -> Approval:
@@ -72,3 +87,28 @@ def test_updating_missing_records_is_rejected(
         approvals.update(_approval(9))
     with pytest.raises(KeyError):
         runs.update(record)
+
+
+def test_approval_round_trip_keeps_action_and_decisions(approvals: ApprovalRepository) -> None:
+    approval = _approval(1)
+    approvals.add(approval)
+    decided = record_decision(approval, ApprovalDecision("cmdr-1", True, "looks right", T0))
+    approvals.update(decided)
+    assert approvals.get("acme", "apr-1") == decided
+
+
+def test_run_round_trip_keeps_initiator(runs: RunRepository) -> None:
+    record = RunRecord(
+        "run-1", "acme", "triage", "inc-1", "alt-1", orchestrator_for("acme"), RunStatus.QUEUED, T0
+    )
+    runs.add(record)
+    assert runs.get("acme", "run-1") == record
+
+
+def test_duplicate_run_is_rejected(runs: RunRepository) -> None:
+    record = RunRecord(
+        "run-1", "acme", "triage", "inc-1", "alt-1", orchestrator_for("acme"), RunStatus.QUEUED, T0
+    )
+    runs.add(record)
+    with pytest.raises(ValueError, match="exists"):
+        runs.add(record)

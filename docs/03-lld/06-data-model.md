@@ -1,7 +1,18 @@
 # LLD 06 — Data Model
 
 Phase 1 uses in-memory repositories. Phase 2 adds PostgreSQL implementations of the
-same repository protocols; the repository contract tests run against both.
+same repository protocols (`providers/storage/postgres/`); the repository contract tests
+in `tests/contracts/` run against both whenever `TEST_DATABASE_URL` is set (always in CI,
+which starts a `postgres:16` service).
+
+**As built:** each aggregate is one row. Parts that only ever load with their parent
+(`entities`, `alert_ids`, an approval's `action` and `decisions`, a run's `initiator`)
+are `jsonb` columns, so a row maps 1:1 to a frozen domain object and the mapping code
+stays small; everything the application filters or sorts by is a real column. The
+executable schema is `providers/storage/postgres/schema.sql` (idempotent, applied at
+start-up by `pool.apply_schema`). Values read back are type-checked by `rows.py`
+accessors, so schema drift fails loudly. The fully normalised design below is the
+target for when approvals or actions need querying on their own.
 
 ## 1. Entity relationships
 
@@ -116,10 +127,11 @@ LangGraph checkpoint tables are created and owned by `langgraph-checkpoint-postg
 
 ## 3. Integrity and concurrency
 
-- **Optimistic locking** on `incidents.version`: updates use `where id = $1 and version = $2`;
+- **Optimistic locking** on `incidents.version` (planned; today one run owns an incident at a time, so updates are last-writer-wins): updates use `where id = $1 and version = $2`;
   0 rows → `ConflictError`, caller retries from fresh state.
-- **Audit sequence**: appended inside a transaction that locks the tenant's latest row
-  (`select … for update`) so `seq` stays gap-free and the chain linear.
+- **Audit sequence**: appended inside one transaction holding a per-tenant advisory lock
+  (`pg_advisory_xact_lock(hashtext(tenant_id))`), so `seq` stays gap-free and the chain
+  linear even for a tenant's very first event; a contract test appends from 8 threads.
 - **Idempotent actions**: `action_results.idempotency_key` unique constraint; a duplicate
   insert means the action already ran → return the stored result.
 - **DB grants**: app role has `insert, select` only on `audit_events` (no update/delete).

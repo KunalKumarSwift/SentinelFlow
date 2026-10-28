@@ -9,7 +9,7 @@ class RunRepository(Protocol):
     """Tenant-scoped run-record store."""
 
     def add(self, record: RunRecord) -> None:
-        """Persist a new run record."""
+        """Persist a new run record. Raises ``ValueError`` if the id exists."""
         ...
 
     def get(self, tenant_id: str, run_id: str) -> RunRecord | None:

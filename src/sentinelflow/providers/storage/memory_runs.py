@@ -11,8 +11,11 @@ class MemoryRunRepository:
         self._items: dict[tuple[str, str], RunRecord] = {}
 
     def add(self, record: RunRecord) -> None:
-        """Store a new record."""
-        self._items[(record.tenant_id, record.id)] = record
+        """Store a new record (``ValueError`` if it exists)."""
+        key = (record.tenant_id, record.id)
+        if key in self._items:
+            raise ValueError(f"run {record.id} already exists")
+        self._items[key] = record
 
     def get(self, tenant_id: str, run_id: str) -> RunRecord | None:
         """Return the tenant's record, if any."""
