@@ -16,7 +16,9 @@ class ScenarioOutput:
 ```
 
 `expected` makes every scenario an **end-to-end test case**: run the lifecycle and assert
-the outcome matches.
+the outcome matches. `tests/integration/test_all_scenarios_lifecycle.py` runs every
+registered scenario through the lifecycle graph and checks severity, verdict and the
+proposed approval kinds (an empty tuple means the incident is escalated or closed).
 
 ## 2. Scenarios
 
@@ -30,12 +32,12 @@ Every scenario's `seed_data` must score to its own `expected.severity` through
 | Module | Alerts | Events | Expected |
 |---|---|---|---|
 | `brute_force.py` | `brute_force_success` | 30–60 failed logins + 1 success, one external IP | HIGH, TP, `DISABLE_USER`, `BLOCK_IP` |
-| `impossible_travel.py` | `impossible_travel` | Two logins, countries ≥ 5 000 km apart, < 30 min | MEDIUM, TP, `FORCE_MFA_RESET` |
+| `impossible_travel.py` | `impossible_travel` | Two logins from different external IPs and countries < 30 min apart; the second country is not one the user works from | MEDIUM, TP, `FORCE_MFA_RESET` |
 | `leaked_key.py` | `access_key_anomaly` | Burst of `ListBuckets`/`GetObject` from unknown IP | CRITICAL, TP, `REVOKE_ACCESS_KEY` (2 approvals) |
-| `phishing.py` | `phishing_click` | Email received + proxy hit on malicious URL | MEDIUM, TP, `PURGE_EMAIL`, `RESET_PASSWORD` |
+| `phishing.py` | `phishing_click` | `email_received` + `url_clicked` on a `.example` lure URL | MEDIUM, TP, `PURGE_EMAIL`, `RESET_PASSWORD` |
 | `powershell.py` | `suspicious_process` | Encoded PowerShell + outbound connection | HIGH, TP, `ISOLATE_HOST` |
-| `exfiltration.py` | `large_download` | 10 GB download at 03:00 local | HIGH, TP, no action → ESCALATED |
-| `prompt_injection.py` | `brute_force_success` | Same as brute force, `raw.user_agent` contains injection text | `injection_suspected`, NEEDS_REVIEW |
+| `exfiltration.py` | `large_download` | One 10–60 GiB download at 03:xx UTC | HIGH, TP, no action → ESCALATED |
+| `prompt_injection.py` | `brute_force_success` | Same as brute force, `raw.user_agent` contains injection text | HIGH, NEEDS_REVIEW (injection indicators kept), same actions as brute force |
 | `benign_travel.py` | `impossible_travel` | Two logins via corporate VPN egress (10.8.0.0/24), different geo countries | LOW, FALSE_POSITIVE, closed |
 
 ## 3. Building blocks (small, shared)
@@ -43,8 +45,9 @@ Every scenario's `seed_data` must score to its own `expected.severity` through
 | Module | Provides |
 |---|---|
 | `simulator/context.py` | `ScenarioContext` (rng, clock, ids, tenant) |
+| `simulator/scenarios/_build.py` | `make_alert`, `make_event` (keep scenarios declarative) |
 | `simulator/output.py` | `ScenarioOutput`, `SeedData` (with `enrichment_for(entities)`), `Expectation` |
-| `simulator/factories.py` | `pick_user`, `external_ip` (TEST-NET-3), `vpn_egress_ip`, `spread(start, count, every)` |
+| `simulator/factories.py` | `pick_user`, `external_ip` (TEST-NET-3), `vpn_egress_ip`, `spread(start, count, every)`, `host_name`, `access_key_id`, `lure_url`, `message_id` |
 | `simulator/geo.py` (later) | Small static table of cities with coordinates; `distance_km(a, b)` |
 | `simulator/registry.py` | `SCENARIOS: Mapping[str, ScenarioFn]` |
 | `simulator/sinks.py` | `HttpSink` (POST to API), `JsonlSink` (write files), `MemorySink` (tests) |

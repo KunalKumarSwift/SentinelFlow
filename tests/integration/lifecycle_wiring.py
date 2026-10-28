@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from sentinelflow.contracts.repositories import AlertRepository
+from sentinelflow.domain.errors import ProviderError
 from sentinelflow.providers.events.memory_event_store import MemoryEventStore
 from sentinelflow.providers.intel.mock_intel import MockThreatIntel
 from sentinelflow.providers.storage.memory_approvals import MemoryApprovalRepository
@@ -39,12 +40,19 @@ class Stores:
     clock: FakeClock
 
 
-def scripted_llm(benign: bool) -> FakeLLM:
-    """Return an LLM scripted for triage, investigation and reporting."""
+def scripted_llm(scenario: str) -> FakeLLM:
+    """Return an LLM scripted for triage, investigation and reporting.
+
+    Only the brute-force family gets a scripted investigation answer; for the other
+    scenarios the model is silent there, so the rule's playbook defaults apply.
+    """
+    scripted = scenario in {"brute_force", "prompt_injection"}
     return FakeLLM(
         {
-            "triage.classify": FP if benign else TP,
-            "investigation.analyse": answer(),
+            "triage.classify": FP if scenario == "benign_travel" else TP,
+            "investigation.analyse": answer()
+            if scripted
+            else ProviderError("silent", retryable=False),
             "report.write": {"markdown": "# Report\nContained."},
         }
     )
@@ -54,7 +62,7 @@ def lifecycle_deps(
     stores: Stores, alerts: AlertRepository, out: ScenarioOutput, identity: FakeIdentityProvider
 ) -> LifecycleDeps:
     """Wire the lifecycle for ``out`` using ``stores``."""
-    llm = scripted_llm(out.name == "benign_travel")
+    llm = scripted_llm(out.name)
     intel = MockThreatIntel(out.seed_data.ip_reputations)
     recorder = AuditRecorder(stores.audit, stores.clock)
     return LifecycleDeps(
