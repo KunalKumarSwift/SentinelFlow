@@ -62,26 +62,26 @@ of state, tested with a table of inputs → expected next node.
 
 ```mermaid
 flowchart LR
-    S((start)) --> SCAN[scan_for_injection]
-    SCAN --> FAN{{fan-out via Send}}
-    FAN --> IP[lookup_ip]
-    FAN --> USR[lookup_user]
-    FAN --> AST[lookup_asset]
-    IP & USR & AST --> MERGE[merge_enrichment]
-    MERGE --> SCORE[score_severity]
-    SCORE --> CLS[classify_with_llm]
-    CLS --> VAL[validate_verdict]
-    VAL --> E((end))
+    S((start)) --> IP[lookup_ip]
+    S --> USR[lookup_user]
+    IP & USR --> SCORE[score]
+    SCORE --> CLS[classify]
+    CLS --> DEC[decide]
+    DEC --> E((end))
 ```
 
-| Node | Kind | Does |
-|---|---|---|
-| `scan_for_injection` | pure | Runs the injection detector over `alert.raw`; sets `injection_suspected` |
-| `lookup_ip / user / asset` | provider | Parallel enrichment through `Send`; each tolerant of `None` entities |
-| `merge_enrichment` | pure | Combines partial results (state reducer) |
-| `score_severity` | pure | Calls `domain.scoring.score_severity` |
-| `classify_with_llm` | LLM | Structured output `TriageClassification(verdict, rationale)`; PII redacted first |
-| `validate_verdict` | pure | If LLM output is invalid or injection suspected → `NEEDS_REVIEW` (fail safe, not fail open) |
+| Node | Kind | Reads (`state.py`) | Does |
+|---|---|---|---|
+| `lookup_ip` / `lookup_user` | provider | `TriageInput` | Run in parallel; skip the provider when the entity is absent |
+| `score` | pure | `ScoreInput` | `domain.scoring.score_severity` — the LLM never influences severity |
+| `classify` | LLM | `ClassifyInput` | Structured output `TriageClassification(verdict, rationale)`; alert text goes only into `Prompt.untrusted`. `ProviderError` or malformed output → `classification=None` |
+| `decide` | pure | `DecideInput` | Fail safe: no classification → `NEEDS_REVIEW`; LLM `FALSE_POSITIVE` on severity ≥ HIGH → `NEEDS_REVIEW`; otherwise the LLM verdict |
+
+Each node declares the narrow `TypedDict` it reads (all keys required) and returns a partial
+`TriageUpdate`; LangGraph passes each node exactly those keys. `run_triage(graph, incident,
+alert) -> TriageResult` is the typed entry point.
+
+Phase 2 adds `scan_for_injection` before enrichment (slice 2.6) and an asset lookup.
 
 ## 5. Investigation
 
