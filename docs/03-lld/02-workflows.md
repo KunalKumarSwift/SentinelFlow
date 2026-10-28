@@ -100,8 +100,8 @@ An asset lookup joins the parallel enrichment later.
 | `fetch_related_events` | provider | `EventStore.related_events(EventQuery)`: same tenant, any shared entity value, ±24 h |
 | `build_timeline` | pure | `domain.timeline.build_timeline`: time-ordered `TimelineEntry` items; consecutive repeats collapse ("login_failed x42") |
 | `retrieve_techniques` | pure | `domain.attack.candidate_techniques`: keyword overlap with a curated 8-technique ATT&CK table (vector index later) |
-| `analyse_with_llm` | LLM | Structured output: narrative, chosen techniques (must be from candidates), suggested `ActionKind`s |
-| `select_actions` | pure | Intersects suggestions with the playbook for the rule and the action catalogue; builds `ProposedAction`s |
+| `analyse` | LLM | Structured output `InvestigationAnalysis(narrative, technique_ids, suggested_actions)`; candidates and allowed actions are trusted instructions, timeline and alert text are untrusted. Failure → `analysis=None` |
+| `select` | pure | LLM may only **narrow**: techniques ∈ candidates, actions ∈ `domain.playbooks.playbook_for(rule)` with a target; rejected items listed in `InvestigationResult.dropped`. No LLM → playbook defaults (still need human approval) |
 
 The LLM may only pick techniques from the retrieved candidates and actions from the
 catalogue — invented values are dropped and logged.
