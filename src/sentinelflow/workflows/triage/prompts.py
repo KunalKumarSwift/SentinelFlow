@@ -29,4 +29,5 @@ def classify_prompt(state: ClassifyInput) -> Prompt:
             "ip_reputation": "unknown" if rep is None else f"{rep.score}/100 {rep.categories}",
             "user": "unknown" if user is None else f"privileged={user.is_privileged}",
         },
+        tenant_id=alert.tenant_id,
     )

@@ -18,6 +18,7 @@ from sentinelflow.providers.storage.memory_runs import MemoryRunRepository
 from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
 from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
+from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
 from sentinelflow.workflows.registry import DEFAULT_REGISTRY
@@ -34,7 +35,9 @@ def tokens() -> Hs256TokenService:
     return Hs256TokenService(secret=SECRET, clock=FakeClock(T0))
 
 
-def make_container(tokens: Hs256TokenService, app_env: str = "dev") -> ApiContainer:
+def make_container(
+    tokens: Hs256TokenService, app_env: str = "dev", throttle: Throttle | None = None
+) -> ApiContainer:
     """Return a container wired with in-memory parts and deterministic ids/time."""
     clock, ids = FakeClock(T0), SequentialIdFactory()
     incidents = MemoryIncidentRepository()
@@ -56,6 +59,7 @@ def make_container(tokens: Hs256TokenService, app_env: str = "dev") -> ApiContai
         clock=clock,
         redactor=Redactor(b"r" * 32),
         ticketing=MemoryTicketing(),
+        throttle=throttle,
     )
 
 

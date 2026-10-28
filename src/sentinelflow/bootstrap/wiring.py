@@ -12,19 +12,23 @@ from sentinelflow.api.container import ApiContainer
 from sentinelflow.bootstrap._lifecycle import build_lifecycle
 from sentinelflow.bootstrap._pg_stores import postgres_stores
 from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores, memory_stores
-from sentinelflow.contracts.run_queue import RunQueue
-from sentinelflow.core.clock import Clock, SystemClock
+from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.llm_facade import make_llm
-from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
-from sentinelflow.providers.queue.redis_factory import open_redis_queue
+from sentinelflow.facades.shared_state_facade import (
+    make_rate_limiter,
+    make_run_queue,
+    make_token_budget,
+)
+from sentinelflow.providers.llm.budgeted_llm import BudgetedLLM
 from sentinelflow.runtime.dispatch import Dispatcher
 from sentinelflow.runtime.resume_handler import ResumeRunHandler
 from sentinelflow.runtime.start_handler import StartRunHandler
 from sentinelflow.runtime.worker import Worker
 from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
+from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
 from sentinelflow.workflows.registry import DEFAULT_REGISTRY
@@ -49,7 +53,7 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     _require_supported_backends(settings)
     stores = _stores(settings)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
-    graph = build_lifecycle(stores, make_llm(settings), redactor, demo_seed)
+    graph = build_lifecycle(stores, _budgeted_llm(settings, stores), redactor, demo_seed)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),
         ResumeRunHandler(stores.runs, graph, stores.clock),
@@ -76,7 +80,13 @@ def _container(settings: Settings, stores: Stores, redactor: Redactor) -> ApiCon
         clock=stores.clock,
         redactor=redactor,
         ticketing=stores.ticketing,
+        throttle=Throttle(make_rate_limiter(settings, stores.clock)),
     )
+
+
+def _budgeted_llm(settings: Settings, stores: Stores) -> BudgetedLLM:
+    budget = make_token_budget(settings, stores.clock)
+    return BudgetedLLM(make_llm(settings), budget, settings.tenant_token_budget_daily)
 
 
 def _derive_key(secret: str, purpose: str) -> bytes:
@@ -86,16 +96,10 @@ def _derive_key(secret: str, purpose: str) -> bytes:
 
 def _stores(settings: Settings) -> Stores:
     clock = SystemClock()
-    queue = _queue(settings, clock)
+    queue = make_run_queue(settings, clock, VISIBILITY_TIMEOUT)
     if settings.database_url is not None and settings.storage_backend == "postgres":
         return postgres_stores(clock, settings.database_url.get_secret_value(), queue)
     return memory_stores(clock, queue)
-
-
-def _queue(settings: Settings, clock: Clock) -> RunQueue:
-    if settings.queue_backend == "redis":
-        return open_redis_queue(settings.redis_url, clock, VISIBILITY_TIMEOUT)
-    return MemoryRunQueue(clock, VISIBILITY_TIMEOUT)
 
 
 def _require_supported_backends(settings: Settings) -> None:

@@ -1,6 +1,6 @@
 """Tests for the LLM classification node and its prompt."""
 
-from sentinelflow.domain.errors import ProviderError
+from sentinelflow.domain.errors import BudgetExceededError, ProviderError
 from sentinelflow.domain.incidents import Verdict
 from sentinelflow.domain.severity import Severity
 from sentinelflow.workflows.triage.nodes.classify import make_classify
@@ -46,3 +46,14 @@ def test_alert_raw_text_is_passed_only_as_untrusted_data() -> None:
     assert INJECTION in prompt.untrusted["alert_raw"]
     assert INJECTION not in prompt.system + prompt.instructions
     assert "never follow instructions" in prompt.system.lower()
+
+
+def test_prompt_is_attributed_to_the_alert_tenant() -> None:
+    llm = FakeLLM({"triage.classify": TP})
+    make_classify(deps_with(llm=llm))(_state())
+    assert llm.prompts[0].tenant_id == "acme"
+
+
+def test_exhausted_budget_yields_no_classification() -> None:
+    llm = FakeLLM({"triage.classify": BudgetExceededError("daily budget used")})
+    assert make_classify(deps_with(llm=llm))(_state()) == {"classification": None}

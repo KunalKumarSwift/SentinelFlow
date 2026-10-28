@@ -13,6 +13,7 @@ from sentinelflow.core.ids import IdFactory
 from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.policy import PolicyEngine
 from sentinelflow.security.redaction import Redactor
+from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionService
 from sentinelflow.workflows.registry import WorkflowRegistry
@@ -24,6 +25,7 @@ class ApiContainer:
 
     Attributes:
         app_env: ``"dev"`` enables the dev-token endpoint; any other value hides it.
+        throttle: Per-tenant rate limits; ``None`` disables them (tests, tools).
     """
 
     app_env: str
@@ -40,6 +42,7 @@ class ApiContainer:
     clock: Clock
     redactor: Redactor
     ticketing: TicketingProvider
+    throttle: Throttle | None = None
 
     def recorder(self) -> AuditRecorder:
         """Return an audit recorder bound to this container's store and clock."""

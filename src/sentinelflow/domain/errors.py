@@ -60,3 +60,20 @@ class UnknownActionError(DomainError):
 
 class ConflictError(SentinelFlowError):
     """The request conflicts with current state, e.g. an approval already decided (HTTP 409)."""
+
+
+class RateLimitedError(SentinelFlowError):
+    """A tenant sent more requests than its limit allows (HTTP 429)."""
+
+    def __init__(self, message: str, *, retry_after: int) -> None:
+        """Create the error; ``retry_after`` is whole seconds until the next window."""
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class BudgetExceededError(ProviderError):
+    """A tenant has used its daily LLM token budget; never retried until the next day."""
+
+    def __init__(self, message: str) -> None:
+        """Create a permanent (non-retryable) provider error."""
+        super().__init__(message, retryable=False)

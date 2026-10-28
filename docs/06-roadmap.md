@@ -66,7 +66,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 |---|---|---|
 | 3.1 ✅ | `RedisRunQueue` (visibility-deadline sorted set, Lua claim, DLQ; ADR 0008) | Contract tests shared with memory queue |
 | 3.2 ✅ | Docker Compose: api, worker ×N, postgres, redis, ollama; `sentinelflow-worker`; Postgres tickets | Smoke test script (run against API + 2 worker processes) |
-| 3.3 | Rate limiting + LLM budget decorator | 429 after limit; `BudgetExceededError` → NEEDS_REVIEW |
+| 3.3 ✅ | Rate limiting + LLM budget decorator | 429 after limit; `BudgetExceededError` → NEEDS_REVIEW |
 | 3.4 | structlog + correlation IDs | Log line contains run_id/tenant_id |
 | 3.5 | OpenTelemetry + Jaeger; Langfuse callback | Span created per node (in-memory exporter) |
 | 3.6 | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |

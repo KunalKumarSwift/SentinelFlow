@@ -24,6 +24,7 @@ def test_prompt_lists_candidates_and_allowed_actions_as_trusted_instructions() -
     assert "T1110" in prompt.instructions and "disable_user" in prompt.instructions
     assert "ignore previous instructions" in prompt.untrusted["alert_raw"]
     assert "ignore previous" not in prompt.instructions
+    assert prompt.tenant_id == "acme"
 
 
 def test_provider_failure_yields_no_analysis() -> None:

@@ -24,10 +24,10 @@ class ReportText(BaseModel):
     markdown: str = Field(min_length=1, max_length=6000)
 
 
-def write_report(llm: LLMProvider, facts: ReportFacts) -> str:
+def write_report(llm: LLMProvider, facts: ReportFacts, tenant_id: str) -> str:
     """Return the report body; without a usable LLM answer, a heading plus the facts."""
     verified = render_facts(facts)
-    prompt = Prompt("report.write", SYSTEM, INSTRUCTIONS, {"facts": verified})
+    prompt = Prompt("report.write", SYSTEM, INSTRUCTIONS, {"facts": verified}, tenant_id)
     try:
         narrative = llm.structured(prompt, ReportText).markdown
     except ProviderError:
