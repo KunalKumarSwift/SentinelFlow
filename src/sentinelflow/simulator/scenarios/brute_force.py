@@ -5,6 +5,7 @@ Expected: HIGH (base MEDIUM + malicious IP), TRUE_POSITIVE.
 
 from datetime import datetime, timedelta
 
+from sentinelflow.domain.actions import ActionKind as K
 from sentinelflow.domain.alerts import Alert, Entities
 from sentinelflow.domain.enrichment import IpReputation, UserContext
 from sentinelflow.domain.events import SecurityEvent
@@ -37,7 +38,7 @@ def generate(ctx: ScenarioContext) -> ScenarioOutput:
     return ScenarioOutput("brute_force", (alert,), events, _seed(ctx, entities), _EXPECTED)
 
 
-_EXPECTED = Expectation(severity=Severity.HIGH, verdict=Verdict.TRUE_POSITIVE)
+_EXPECTED = Expectation(Severity.HIGH, Verdict.TRUE_POSITIVE, (K.DISABLE_USER, K.BLOCK_IP))
 
 
 def _login(ctx: ScenarioContext, at: datetime, kind: str, entities: Entities) -> SecurityEvent:

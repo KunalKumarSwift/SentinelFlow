@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from sentinelflow.domain.actions import ActionKind
 from sentinelflow.domain.alerts import Alert, Entities
 from sentinelflow.domain.enrichment import Enrichment, IpReputation, UserContext
 from sentinelflow.domain.events import SecurityEvent
@@ -29,6 +30,7 @@ class Expectation:
 
     severity: Severity
     verdict: Verdict
+    actions: tuple[ActionKind, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

@@ -30,3 +30,23 @@ def vpn_egress_ip(rng: Random) -> str:
 def spread(start: datetime, count: int, every: timedelta) -> tuple[datetime, ...]:
     """Return ``count`` timestamps beginning at ``start``, ``every`` apart."""
     return tuple(start + every * i for i in range(count))
+
+
+def host_name(rng: Random) -> str:
+    """Return a random workstation name such as ``wks-0042``."""
+    return f"wks-{rng.randint(1, 9999):04d}"
+
+
+def access_key_id(rng: Random) -> str:
+    """Return a random, obviously fake cloud access key id."""
+    return "AKIAFAKE" + "".join(rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567") for _ in range(12))
+
+
+def lure_url(rng: Random) -> str:
+    """Return a phishing URL under the reserved ``.example`` domain."""
+    return f"https://login-verify-{rng.randint(100, 999)}.example/session"
+
+
+def message_id(rng: Random) -> str:
+    """Return a random e-mail message id."""
+    return f"msg-{rng.randint(10**7, 10**8 - 1)}"
