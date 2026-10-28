@@ -17,6 +17,7 @@ __all__ = [
     "approval_requirement",
     "parse_action_kind",
     "target_of",
+    "targets_user",
 ]
 
 
@@ -81,3 +82,8 @@ def parse_action_kind(value: str) -> ActionKind:
         return ActionKind(value)
     except ValueError as exc:
         raise UnknownActionError(f"{value!r} is not an allow-listed action") from exc
+
+
+def targets_user(kind: ActionKind) -> bool:
+    """Whether the action acts on a user account (relevant for the no-self-action rule)."""
+    return CATALOGUE[kind].target_entity == "user"

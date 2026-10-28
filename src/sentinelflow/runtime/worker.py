@@ -10,19 +10,19 @@ Failure policy:
 
 from collections.abc import Callable
 
-from sentinelflow.contracts.run_queue import Delivery, RunQueue, StartRun
+from sentinelflow.contracts.run_queue import Delivery, RunCommand, RunQueue
 from sentinelflow.domain.errors import ProviderError, SentinelFlowError
 
 BATCH_SIZE = 10
 
 
 class Worker:
-    """Processes queued ``StartRun`` commands with one handler."""
+    """Processes queued run commands with one handler (usually a ``Dispatcher``)."""
 
     def __init__(
         self,
         queue: RunQueue,
-        handler: Callable[[StartRun], None],
+        handler: Callable[[RunCommand], None],
         consumer: str,
         *,
         max_attempts: int = 5,

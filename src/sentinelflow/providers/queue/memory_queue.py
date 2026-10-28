@@ -8,13 +8,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sentinelflow.contracts.run_queue import Delivery, StartRun
+from sentinelflow.contracts.run_queue import Delivery, RunCommand
 from sentinelflow.core.clock import Clock
 
 
 @dataclass(slots=True)
 class _Entry:
-    command: StartRun
+    command: RunCommand
     attempts: int = 0
     claimed_at: datetime | None = None
 
@@ -29,7 +29,7 @@ class MemoryRunQueue:
         self._dead: list[tuple[Delivery, str]] = []
         self._next_id = 0
 
-    def publish(self, command: StartRun) -> None:
+    def publish(self, command: RunCommand) -> None:
         """Enqueue ``command``."""
         self._next_id += 1
         self._entries[f"msg-{self._next_id:06d}"] = _Entry(command)

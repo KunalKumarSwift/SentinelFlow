@@ -23,18 +23,30 @@ class StartRun:
 
 
 @dataclass(frozen=True, slots=True)
+class ResumeRun:
+    """Wake a paused run after an approval decision; the worker re-reads all approvals."""
+
+    run_id: str
+    tenant_id: str
+    approval_id: str
+
+
+RunCommand = StartRun | ResumeRun
+
+
+@dataclass(frozen=True, slots=True)
 class Delivery:
     """One claimed copy of a queued command; ``attempt`` starts at 1."""
 
     id: str
-    command: StartRun
+    command: RunCommand
     attempt: int
 
 
 class RunQueue(Protocol):
     """At-least-once command queue with acknowledgement and a dead-letter list."""
 
-    def publish(self, command: StartRun) -> None:
+    def publish(self, command: RunCommand) -> None:
         """Enqueue ``command``."""
         ...
 

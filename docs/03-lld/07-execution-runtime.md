@@ -51,9 +51,9 @@ Code split (each file ≤ 100 lines):
 | Module | Responsibility | Phase |
 |---|---|---|
 | `runtime/worker.py` | `Worker.run_once()`: claim a batch → handler → ack / leave for retry / dead-letter | 1 ✅ |
-| `runtime/start_handler.py` | `StartRunHandler`: load incident + alert, `run_lifecycle`, save incident | 1 ✅ |
-| `runtime/dispatch.py` | Map command type → handler | 2 |
-| `runtime/resume_handler.py` | Rebuild decision from DB, resume graph | 2 |
+| `runtime/start_handler.py` | `StartRunHandler`: run record → `RUNNING`, `run_lifecycle`, → `WAITING`/`COMPLETED` | 1–2 ✅ |
+| `runtime/dispatch.py` | `Dispatcher`: `StartRun` → start handler, `ResumeRun` → resume handler | 2 ✅ |
+| `runtime/resume_handler.py` | `ResumeRunHandler`: `resume_lifecycle`; run → `WAITING` or `COMPLETED` | 2 ✅ |
 | `runtime/outcome.py` | Run status bookkeeping; graceful shutdown on SIGTERM | 3 |
 
 Failure classification (`worker.py`): `ProviderError(retryable=True)` or an unexpected

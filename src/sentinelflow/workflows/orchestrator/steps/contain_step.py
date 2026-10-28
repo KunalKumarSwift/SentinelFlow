@@ -1,5 +1,6 @@
 """Containment step: execute approved actions through the tool guard, then close out."""
 
+from sentinelflow.domain.actions import targets_user
 from sentinelflow.domain.approvals import Approval, ApprovalStatus
 from sentinelflow.domain.lifecycle import IncidentEvent, transition
 from sentinelflow.security.permissions import Permission
@@ -45,7 +46,7 @@ def make_contain_step(deps: LifecycleDeps) -> Step:
 def _execute(deps: LifecycleDeps, state: LifecycleState, approval: Approval) -> str:
     action = approval.action
     incident = load_incident(deps, state)
-    target_user = action.target if action.kind.value.endswith("_user") else None
+    target_user = action.target if targets_user(action.kind) else None
     context = ActionContext(target_user=target_user, quorum_met=True)
     call = ToolCall(
         f"execute:{action.id}", Permission.ACTION_EXECUTE, resource_of(incident), context

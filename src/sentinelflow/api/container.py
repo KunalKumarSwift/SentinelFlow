@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from sentinelflow.contracts.approvals import ApprovalRepository
 from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.repositories import IncidentRepository
 from sentinelflow.contracts.run_queue import RunQueue
@@ -9,6 +10,7 @@ from sentinelflow.contracts.runs import RunRepository
 from sentinelflow.core.clock import Clock
 from sentinelflow.core.ids import IdFactory
 from sentinelflow.security.audit_recorder import AuditRecorder
+from sentinelflow.security.policy import PolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionService
@@ -30,6 +32,8 @@ class ApiContainer:
     registry: WorkflowRegistry
     queue: RunQueue
     runs: RunRepository
+    approvals: ApprovalRepository
+    policy: PolicyEngine
     ids: IdFactory
     audit: AuditStore
     clock: Clock

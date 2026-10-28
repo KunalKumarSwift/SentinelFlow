@@ -9,6 +9,7 @@ from sentinelflow.domain.actions import (
     approval_requirement,
     parse_action_kind,
     target_of,
+    targets_user,
 )
 from sentinelflow.domain.errors import InvalidValueError, UnknownActionError
 from sentinelflow.domain.severity import Severity
@@ -69,3 +70,11 @@ def test_parse_rejects_anything_else(value: str) -> None:
 def test_proposed_action_needs_target_and_reason() -> None:
     with pytest.raises(InvalidValueError, match="target"):
         ProposedAction("act-1", "inc-1", K.BLOCK_IP, " ", "why", "svc")
+
+
+def test_only_user_actions_target_users() -> None:
+    assert [k for k in K if targets_user(k)] == [
+        K.FORCE_MFA_RESET,
+        K.RESET_PASSWORD,
+        K.DISABLE_USER,
+    ]

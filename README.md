@@ -56,7 +56,13 @@ uv run sentinelflow-sim run benign_travel --seed 42
 
 Open <http://127.0.0.1:8000/docs>, get a token from `POST /v1/auth/dev-token`
 (e.g. roles `["soc-analyst-l1"]`, tenant `acme`), click **Authorize**, then
-`GET /v1/incidents`: the brute-force incident is triaged **high**, the VPN login **low**.
+`GET /v1/incidents`: the brute-force incident is **awaiting approval** (high), the VPN login
+is closed or triaged **low**. Then, as approvers:
+
+1. Token for `incident-commander` → `GET /v1/approvals` → approve `disable_user`.
+2. Token for `soc-analyst-l2` → approve `block_ip` (an L2 cannot approve the high-impact one).
+3. The worker resumes the paused LangGraph run and the incident becomes **contained**;
+   `GET /v1/audit/verify` (as `auditor`) proves the whole trail is untampered.
 
 Choose an LLM for real verdicts:
 

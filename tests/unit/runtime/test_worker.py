@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from sentinelflow.contracts.run_queue import StartRun
+from sentinelflow.contracts.run_queue import RunCommand, StartRun
 from sentinelflow.domain.errors import NotFoundError, ProviderError
 from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.runtime.worker import Worker
@@ -18,9 +18,9 @@ class ScriptedHandler:
 
     def __init__(self, *failures: Exception) -> None:
         self._failures = list(failures)
-        self.handled: list[StartRun] = []
+        self.handled: list[RunCommand] = []
 
-    def __call__(self, command: StartRun) -> None:
+    def __call__(self, command: RunCommand) -> None:
         self.handled.append(command)
         if self._failures:
             raise self._failures.pop(0)
