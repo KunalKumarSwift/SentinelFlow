@@ -64,6 +64,7 @@ workflows/triage/
 ```
 bootstrap                      ← may import anything (composition root)
 api  |  runtime  |  simulator  ← entry points
+facades                        ← config value → provider (imports providers)
 workflows  |  providers        ← independent of each other
 security
 contracts

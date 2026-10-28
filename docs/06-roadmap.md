@@ -4,7 +4,7 @@ Each phase is a set of **small TDD slices**. A slice is done when its tests pass
 the definition of done in the [engineering guidelines](04-engineering-guidelines.md#7-definition-of-done-per-slice).
 "First tests" lists the tests to write before any production code.
 
-## Phase 0 — Bootstrap
+## Phase 0 — Bootstrap ✅
 
 | Slice | Deliverable | First tests |
 |---|---|---|

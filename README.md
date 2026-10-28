@@ -7,7 +7,7 @@ workflows, proposes containment actions, and executes those actions **only** aft
 policy engine and (when required) a human approver allow it. Every decision is written
 to a tamper-evident audit log.
 
-> Status: **design phase** — documentation first, then implementation via TDD (see the roadmap).
+> Status: **Phase 0 complete** (tooling, CI, core modules). Next: Phase 1 — see the [roadmap](docs/06-roadmap.md).
 
 ## Why this project exists
 
@@ -33,6 +33,15 @@ shows the opposite:
 All external systems (SIEM, threat intel, identity provider, ticketing, LLM) are
 **pluggable providers**. Phase 1 ships with mock providers fed by a synthetic
 attack simulator, so the whole system runs locally for free.
+
+## Getting started
+
+```bash
+uv sync                                   # install (Python 3.12+)
+uv run pytest                             # run the tests
+uv run ruff check . && uv run pyright     # lint + strict type check
+uv run lint-imports                       # enforce the layer rules
+```
 
 ## Documentation
 
