@@ -64,6 +64,10 @@ If a file grows past 100 lines, split by responsibility (e.g. `scoring.py` → `
   catch-log-and-continue.
 - **Config:** only `core/config.py` reads environment variables.
 - **Imports:** stdlib → third-party → local (Ruff `I`). Heavy libraries imported lazily inside providers.
+- **LangGraph typing:** nodes declare a narrow input `TypedDict` (only the keys they read, all
+  required) and return a partial update `TypedDict`. Only `graph.py` wiring files may disable
+  `reportUnknownMemberType` / `reportMissingTypeStubs` (LangGraph's own signatures), and each
+  exposes a typed `run_*` function so callers and tests stay strict.
 
 ## 5. Documentation
 

@@ -26,7 +26,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.7 ✅ | Permissions, roles, RBAC check | Generated RBAC matrix tests |
 | 1.8 ✅ | `Principal` from HS256 JWT | Valid; expired; bad signature; missing claim |
 | 1.9 ✅ | Ingestion service (dedup + incident upsert) | New alert → new incident; duplicate → merged |
-| 1.10 | Triage graph with `FakeLLM` | Brute-force → HIGH/TP; benign → FP closed; invalid LLM output → NEEDS_REVIEW |
+| 1.10 ✅ | Triage graph with `FakeLLM` | Brute-force → HIGH/TP; benign → FP closed; invalid LLM output → NEEDS_REVIEW |
 | 1.11 | Workflow registry + orchestrator (triage only) | Unknown workflow rejected; permission required |
 | 1.12 | `MemoryRunQueue` + worker loop | StartRun runs graph; failure not acked |
 | 1.13 | API: dev-token, alerts, incidents, runs | 401/403/404 paths; happy path |

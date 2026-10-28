@@ -27,3 +27,12 @@ class InvalidTransitionError(DomainError):
 
 class AuthenticationError(SentinelFlowError):
     """A credential is missing, malformed, expired or not trusted (HTTP 401)."""
+
+
+class ProviderError(SentinelFlowError):
+    """An external system (LLM, threat intel, directory, ...) failed or misbehaved."""
+
+    def __init__(self, message: str, *, retryable: bool) -> None:
+        """Create the error; ``retryable`` tells callers whether a retry may succeed."""
+        super().__init__(message)
+        self.retryable = retryable

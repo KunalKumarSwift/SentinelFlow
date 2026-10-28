@@ -5,6 +5,8 @@ description = "Agentic security-incident orchestration with LangGraph, built sec
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "langchain-core>=0.3",
+    "langgraph>=0.6",
     "pydantic-settings>=2.6",
     "pyjwt>=2.10",
 ]
