@@ -1,0 +1,87 @@
+# 06 — Roadmap
+
+Each phase is a set of **small TDD slices**. A slice is done when its tests pass and it meets
+the definition of done in the [engineering guidelines](04-engineering-guidelines.md#7-definition-of-done-per-slice).
+"First tests" lists the tests to write before any production code.
+
+## Phase 0 — Bootstrap
+
+| Slice | Deliverable | First tests |
+|---|---|---|
+| 0.1 | `pyproject.toml` (uv), ruff, pyright strict, pytest, import-linter config | A trivial `test_package_imports` |
+| 0.2 | `scripts/check_file_size.py` | Fails on a 121-line temp file, passes on 120 |
+| 0.3 | GitHub Actions CI: lint, type-check, import rules, size check, tests | CI green on the trivial test |
+| 0.4 | `core/clock.py`, `core/ids.py`, `core/config.py` | `FakeClock` advances; config defaults; required secret missing raises |
+
+## Phase 1 — MVP: ingest and triage (single process)
+
+| Slice | Deliverable | First tests |
+|---|---|---|
+| 1.1 | Domain enums + `Alert`, `Entities`, `Incident` | Frozen; equality; invalid severity rejected |
+| 1.2 | `fingerprint_alert`, `is_duplicate` | Same entities → same fingerprint; outside window → not duplicate |
+| 1.3 | `score_severity` + table | Table-driven cases per rule and modifier |
+| 1.4 | Incident state machine `next_status` | Every legal transition; illegal raises |
+| 1.5 | Simulator core + `brute_force` + `benign` | Same seed → identical output; expected fields set |
+| 1.6 | Protocols + fakes + `MockThreatIntel`, `MockIdentity` | Contract tests for intel and identity |
+| 1.7 | Permissions, roles, RBAC check | Generated RBAC matrix tests |
+| 1.8 | `Principal` from HS256 JWT | Valid; expired; bad signature; missing claim |
+| 1.9 | Ingestion service (dedup + incident upsert) | New alert → new incident; duplicate → merged |
+| 1.10 | Triage graph with `FakeLLM` | Brute-force → HIGH/TP; benign → FP closed; invalid LLM output → NEEDS_REVIEW |
+| 1.11 | Workflow registry + orchestrator (triage only) | Unknown workflow rejected; permission required |
+| 1.12 | `MemoryRunQueue` + worker loop | StartRun runs graph; failure not acked |
+| 1.13 | API: dev-token, alerts, incidents, runs | 401/403/404 paths; happy path |
+| 1.14 | `OllamaLLM` + `AnthropicLLM` providers + facade | Facade selects by config; error translation (no network in unit tests) |
+
+**Demo:** `sentinelflow-sim run brute_force` → incident triaged HIGH in Swagger.
+
+## Phase 2 — Secure containment
+
+| Slice | Deliverable | First tests |
+|---|---|---|
+| 2.1 | Action catalogue + `approval_requirement` | Table-driven by kind × severity |
+| 2.2 | ABAC rules (one file each) | Allow + deny case per rule |
+| 2.3 | Policy engine (deny-overrides) | Order: tenant → RBAC → ABAC; reason strings |
+| 2.4 | Audit chain + `AuditStore` (memory) | Hypothesis tamper tests |
+| 2.5 | Tool guard | Scope ∩ initiator ∩ orchestrator; every call audited |
+| 2.6 | Redaction + injection detector | PII hidden without permission; injection phrases flagged |
+| 2.7 | Investigation graph (event store, timeline, ATT&CK keyword retrieval) | Techniques only from candidates |
+| 2.8 | Containment graph with `interrupt` | Pauses; resumes; executes only with quorum |
+| 2.9 | Approvals API + resume command | SoD, self-action, distinct approvers, 409 on decided |
+| 2.10 | Report graph + ticketing | Report contains facts; ticket created |
+| 2.11 | PostgreSQL repositories + Postgres checkpointer | Contract tests run against memory and Postgres (testcontainers) |
+| 2.12 | Remaining simulator scenarios | Each scenario's `expected` met end-to-end (graph level) |
+
+**Demo:** leaked-key scenario → commander + second approver → key revoked → report; audit verifies.
+
+## Phase 3 — Scale and observe
+
+| Slice | Deliverable | First tests |
+|---|---|---|
+| 3.1 | `RedisRunQueue` (streams, consumer group, re-claim, DLQ) | Contract tests shared with memory queue |
+| 3.2 | Docker Compose: api, worker ×N, postgres, redis, ollama | Smoke test script |
+| 3.3 | Rate limiting + LLM budget decorator | 429 after limit; `BudgetExceeded` → NEEDS_REVIEW |
+| 3.4 | structlog + correlation IDs | Log line contains run_id/tenant_id |
+| 3.5 | OpenTelemetry + Jaeger; Langfuse callback | Span created per node (in-memory exporter) |
+| 3.6 | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |
+| 3.7 | Locust load test + `docs/benchmarks.md` | — (measurement) |
+| 3.8 | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
+
+## Phase 4 — Production-grade identity and deployment
+
+| Slice | Deliverable |
+|---|---|
+| 4.1 | Keycloak realm export + RS256/JWKS verifier |
+| 4.2 | `OpaPolicyEngine` + Rego policies, same test-suite as in-code engine |
+| 4.3 | PostgreSQL row-level security per tenant |
+| 4.4 | Access-review scheduled workflow |
+| 4.5 | Helm chart, HPA for API, KEDA for workers |
+| 4.6 | Optional real providers: AbuseIPDB, VirusTotal, GitHub Issues, Slack/Discord webhook |
+| 4.7 | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
+| 4.8 | Demo video + architecture diagram for the README |
+
+## Résumé checkpoints
+
+- After Phase 1: "LangGraph triage pipeline with RBAC-protected FastAPI, TDD, 90 %+ coverage".
+- After Phase 2: add "policy engine (RBAC+ABAC), human-in-the-loop approvals, hash-chained audit log, prompt-injection defences".
+- After Phase 3: add measured throughput/latency numbers and crash-recovery guarantees.
+- After Phase 4: add "OIDC (Keycloak), OPA, multi-tenant RLS, Kubernetes autoscaling".
