@@ -36,3 +36,19 @@ class ProviderError(SentinelFlowError):
         """Create the error; ``retryable`` tells callers whether a retry may succeed."""
         super().__init__(message)
         self.retryable = retryable
+
+
+class NotFoundError(SentinelFlowError):
+    """A requested resource does not exist or is not visible to the caller (HTTP 404)."""
+
+
+class UnknownWorkflowError(NotFoundError):
+    """No workflow is registered under the requested name."""
+
+
+class AuthorizationError(SentinelFlowError):
+    """The caller is authenticated but not allowed to do this (HTTP 403)."""
+
+
+class PolicyDeniedError(AuthorizationError):
+    """The policy engine denied a request; the message is the human-readable reason."""
