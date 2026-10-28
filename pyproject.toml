@@ -6,13 +6,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "httpx>=0.28",
     "langchain-anthropic>=0.3",
     "langchain-core>=0.3",
     "langchain-ollama>=0.3",
     "langgraph>=0.6",
     "pydantic-settings>=2.6",
     "pyjwt>=2.10",
+    "uvicorn>=0.32",
 ]
+
+[project.scripts]
+sentinelflow-api = "sentinelflow.bootstrap.serve:main"
+sentinelflow-sim = "sentinelflow.simulator.cli:run"
 
 [dependency-groups]
 dev = [
@@ -22,7 +28,6 @@ dev = [
     "ruff>=0.8",
     "pyright>=1.1.390",
     "import-linter>=2.1",
-    "httpx>=0.28",
 ]
 
 [build-system]

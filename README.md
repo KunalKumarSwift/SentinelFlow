@@ -7,7 +7,7 @@ workflows, proposes containment actions, and executes those actions **only** aft
 policy engine and (when required) a human approver allow it. Every decision is written
 to a tamper-evident audit log.
 
-> Status: **Phase 0 complete** (tooling, CI, core modules). Next: Phase 1 — see the [roadmap](docs/06-roadmap.md).
+> Status: **Phase 1 complete**: alerts are ingested, deduplicated and triaged by a LangGraph workflow behind an RBAC-protected API. Next: Phase 2 (policy engine, human-approved containment, audit chain). See the [roadmap](docs/06-roadmap.md).
 
 ## Why this project exists
 
@@ -42,6 +42,29 @@ uv run pytest                             # run the tests
 uv run ruff check . && uv run pyright     # lint + strict type check
 uv run lint-imports                       # enforce the layer rules
 ```
+
+### Run the demo (offline, free)
+
+```bash
+# terminal 1: API + background worker (in-memory, mock intel, no LLM)
+APP_ENV=dev JWT_SECRET=change-me-to-32-or-more-characters uv run sentinelflow-api
+
+# terminal 2: fire synthetic attacks at it
+uv run sentinelflow-sim run brute_force --seed 42
+uv run sentinelflow-sim run benign_travel --seed 42
+```
+
+Open <http://127.0.0.1:8000/docs>, get a token from `POST /v1/auth/dev-token`
+(e.g. roles `["soc-analyst-l1"]`, tenant `acme`), click **Authorize**, then
+`GET /v1/incidents`: the brute-force incident is triaged **high**, the VPN login **low**.
+
+Choose an LLM for real verdicts:
+
+| `LLM_BACKEND` | Cost | Extra settings |
+|---|---|---|
+| `none` (default) | free | — every incident goes to human review (`needs_review`) |
+| `ollama` | free, local | `OLLAMA_URL`, `LLM_MODEL` (default `qwen2.5:7b`) |
+| `anthropic` | ~$0.10 / $0.50 per 1M tokens | `ANTHROPIC_API_KEY`, `LLM_MODEL` (default `claude-haiku-5-5`) |
 
 ## Documentation
 

@@ -11,7 +11,8 @@ Environment:
     OLLAMA_URL (default: "http://localhost:11434"), ANTHROPIC_API_KEY,
     STORAGE_BACKEND (default: "memory"), DATABASE_URL,
     QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
-    INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000).
+    INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000),
+    API_HOST (default: "127.0.0.1"), API_PORT (default: 8000).
 """
 
 from typing import Literal, Self
@@ -37,6 +38,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     intel_backend: Literal["mock", "abuseipdb"] = "mock"
     tenant_token_budget_daily: int = Field(default=200_000, gt=0)
+    api_host: str = "127.0.0.1"
+    api_port: int = Field(default=8000, gt=0, lt=65536)
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:

@@ -13,7 +13,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 0.3 | GitHub Actions CI: lint, type-check, import rules, size check, tests | CI green on the trivial test |
 | 0.4 | `core/clock.py`, `core/ids.py`, `core/config.py` | `FakeClock` advances; config defaults; required secret missing raises |
 
-## Phase 1 — MVP: ingest and triage (single process)
+## Phase 1 — MVP: ingest and triage (single process) ✅
 
 | Slice | Deliverable | First tests |
 |---|---|---|
@@ -32,6 +32,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.13a ✅ | API app: bearer auth, permission dependency, problem+json errors, health, dev-token | 401/403 paths; error mapping; dev-token hidden outside dev |
 | 1.13b ✅ | API routes: alerts, incidents, workflows/runs (start) | 401/403/404/409 paths; tenant isolation; happy path |
 | 1.14 ✅ | `OllamaLLM` + `AnthropicLLM` providers + facade | Facade selects by config; error translation (no network in unit tests) |
+| 1.15 ✅ | Composition root, `sentinelflow-api` (API + worker thread), `sentinelflow-sim` CLI | End-to-end: alert → worker → triaged incident; unsupported backends fail at start-up |
 
 **Demo:** `sentinelflow-sim run brute_force` → incident triaged HIGH in Swagger.
 
