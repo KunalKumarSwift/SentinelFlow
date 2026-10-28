@@ -2,12 +2,7 @@
 
 import threading
 
-import pytest
-from pydantic import SecretStr
-
 from sentinelflow.bootstrap.serve import work_until
-from sentinelflow.bootstrap.wiring import build_runtime
-from sentinelflow.core.config import Settings
 
 
 class CountingWorker:
@@ -29,11 +24,3 @@ def test_work_until_drains_until_stopped() -> None:
     worker = CountingWorker(stop)
     work_until(worker, stop)
     assert worker.calls == 3
-
-
-def test_unsupported_backend_fails_at_start_up() -> None:
-    settings = Settings(  # type: ignore[call-arg]
-        jwt_secret=SecretStr("s" * 32), intel_backend="abuseipdb"
-    )
-    with pytest.raises(ValueError, match="not available"):
-        build_runtime(settings)

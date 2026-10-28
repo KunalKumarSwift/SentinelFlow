@@ -104,6 +104,13 @@ produced by the simulator, so a scenario's intel, users and events are consisten
 | `MemoryTicketing` / `PgTicketing` | Tickets in a dict or the `tickets` table; `TCK-0001` style IDs |
 | `ConsoleNotifier` | Logs the message |
 
+**AbuseIPDB (built, slice 4.6).** `providers/intel/abuseipdb_intel.AbuseIpdbThreatIntel` calls
+the v2 `check` endpoint (free tier, 1 000 checks/day). Internal addresses (the same
+`INTERNAL_NETWORKS` list severity scoring uses) and unparseable values are **never sent**
+to the third party. An IP nobody has reported is `None` ("no intel"). 429, 5xx and network
+errors are retryable `ProviderError`s, other failures permanent, and error messages never
+contain the key. Selected by `facades/intel_facade.make_threat_intel`.
+
 ## 4. Facades and configuration
 
 Facades contain switch logic only:
@@ -135,6 +142,7 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `QUEUE_BACKEND` | `memory` | `memory` / `redis` |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis DSN |
 | `INTEL_BACKEND` | `mock` | `mock` / `abuseipdb` |
+| `ABUSEIPDB_API_KEY` | — | Required for `INTEL_BACKEND=abuseipdb` |
 | `TENANT_TOKEN_BUDGET_DAILY` | `200000` | LLM tokens per tenant per day |
 | `API_HOST` / `API_PORT` | `127.0.0.1` / `8000` | Bind address of `sentinelflow-api` |
 | `RUN_WORKER_IN_API` | `true` | `false` for API-only processes (needs `postgres` + `redis`) |

@@ -6,10 +6,11 @@ from opentelemetry.trace import Tracer
 
 from sentinelflow.bootstrap._stores import Stores
 from sentinelflow.contracts.llm import LLMProvider
+from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
+from sentinelflow.facades.intel_facade import make_threat_intel
 from sentinelflow.providers.events.memory_event_store import MemoryEventStore
 from sentinelflow.providers.identity.mock_identity import MockIdentity
-from sentinelflow.providers.intel.mock_intel import MockThreatIntel
 from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.policy import PolicyEngine
 from sentinelflow.security.redaction import Redactor
@@ -31,6 +32,7 @@ class Services:
     tracer: Tracer
     demo_seed: int
     policy: PolicyEngine
+    settings: Settings
 
 
 def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
@@ -38,7 +40,8 @@ def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
     llm, redactor, demo_seed = services.llm, services.redactor, services.demo_seed
     seed = demo_seed_data(demo_seed)
     identity = MockIdentity(seed.users)
-    triage = build_triage_graph(TriageDeps(MockThreatIntel(seed.ip_reputations), identity, llm))
+    intel = make_threat_intel(services.settings, seed.ip_reputations)
+    triage = build_triage_graph(TriageDeps(intel, identity, llm))
     investigation = build_investigation_graph(
         InvestigationDeps(MemoryEventStore(demo_events(demo_seed)), llm)
     )

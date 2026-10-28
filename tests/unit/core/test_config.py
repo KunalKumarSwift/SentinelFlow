@@ -1,29 +1,10 @@
-"""Tests for environment-driven settings."""
+"""Tests for environment-driven settings: defaults, overrides and secrets."""
 
 import pytest
 from pydantic import ValidationError
 
 from sentinelflow.core.config import load_settings
-
-SECRET = "s" * 32
-MANAGED_VARS = (
-    "JWT_SECRET",
-    "LLM_BACKEND",
-    "ANTHROPIC_API_KEY",
-    "STORAGE_BACKEND",
-    "DATABASE_URL",
-    "QUEUE_BACKEND",
-    "RUN_WORKER_IN_API",
-    "LOG_FORMAT",
-    "AUTH_MODE",
-    "OIDC_ISSUER",
-)
-
-
-@pytest.fixture(autouse=True)
-def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in MANAGED_VARS:
-        monkeypatch.delenv(name, raising=False)
+from tests.unit.core.conftest import SECRET
 
 
 def test_defaults_run_fully_offline(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -63,56 +44,3 @@ def test_unknown_backend_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LLM_BACKEND", "gpt-magic")
     with pytest.raises(ValidationError, match="llm_backend"):
         load_settings()
-
-
-def test_anthropic_backend_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("JWT_SECRET", SECRET)
-    monkeypatch.setenv("LLM_BACKEND", "anthropic")
-    with pytest.raises(ValidationError, match="ANTHROPIC_API_KEY"):
-        load_settings()
-
-
-def test_postgres_storage_requires_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("JWT_SECRET", SECRET)
-    monkeypatch.setenv("STORAGE_BACKEND", "postgres")
-    with pytest.raises(ValidationError, match="DATABASE_URL"):
-        load_settings()
-
-
-def test_api_without_worker_requires_shared_storage_and_queue(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("JWT_SECRET", SECRET)
-    monkeypatch.setenv("RUN_WORKER_IN_API", "false")
-    with pytest.raises(ValidationError, match="QUEUE_BACKEND=redis"):
-        load_settings()
-
-
-def test_api_without_worker_is_allowed_with_postgres_and_redis(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    for name, value in {
-        "JWT_SECRET": SECRET,
-        "RUN_WORKER_IN_API": "false",
-        "STORAGE_BACKEND": "postgres",
-        "DATABASE_URL": "postgresql://db/sf",
-        "QUEUE_BACKEND": "redis",
-    }.items():
-        monkeypatch.setenv(name, value)
-    assert load_settings().run_worker_in_api is False
-
-
-def test_logs_are_json_unless_console_is_chosen(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("JWT_SECRET", SECRET)
-    assert load_settings().log_format == "json"
-    monkeypatch.setenv("LOG_FORMAT", "console")
-    assert load_settings().log_format == "console"
-
-
-def test_oidc_mode_requires_an_issuer(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("JWT_SECRET", SECRET)
-    monkeypatch.setenv("AUTH_MODE", "oidc")
-    with pytest.raises(ValidationError, match="OIDC_ISSUER"):
-        load_settings()
-    monkeypatch.setenv("OIDC_ISSUER", "http://keycloak:8080/realms/sentinelflow")
-    assert load_settings().auth_mode == "oidc"

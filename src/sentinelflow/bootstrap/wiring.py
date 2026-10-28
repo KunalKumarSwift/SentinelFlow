@@ -1,8 +1,7 @@
 """Build the runtime: API container plus one worker sharing the stores and metrics.
 
-Storage may be memory or PostgreSQL and the queue memory or Redis; intel and identity
-are mocks. Other backends are rejected here so a misconfiguration fails at start-up,
-not mid-run.
+Every backend is chosen by a facade from ``Settings``; invalid combinations are
+rejected when the settings are loaded, so a misconfiguration fails at start-up.
 """
 
 import hashlib
@@ -42,19 +41,15 @@ class Runtime:
 
 
 def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
-    """Wire every component for one process.
-
-    Raises:
-        ValueError: If settings ask for a backend this phase does not provide.
-    """
-    _require_supported_backends(settings)
+    """Wire every component for one process."""
     metrics = PrometheusMetrics(CollectorRegistry())
     stores = _stores(settings, metrics)
     metrics.track_queue_depth(stores.queue.depth)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
     tracer = make_tracer(settings)
     llm = _budgeted_llm(settings, stores, metrics)
-    services = Services(llm, redactor, tracer, demo_seed, make_policy_engine(settings))
+    policy = make_policy_engine(settings)
+    services = Services(llm, redactor, tracer, demo_seed, policy, settings)
     graph = build_lifecycle(stores, services)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),
@@ -85,8 +80,3 @@ def _stores(settings: Settings, metrics: PrometheusMetrics) -> Stores:
         stores = memory_stores(clock, queue)
     # Every audit append (policy denials included) is counted, whoever writes it.
     return replace(stores, audit=CountingAuditStore(stores.audit, metrics))
-
-
-def _require_supported_backends(settings: Settings) -> None:
-    if settings.intel_backend != "mock":
-        raise ValueError(f"intel backend {settings.intel_backend!r} is not available yet")

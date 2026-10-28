@@ -11,7 +11,8 @@ Environment:
     OLLAMA_URL (default: "http://localhost:11434"), ANTHROPIC_API_KEY,
     STORAGE_BACKEND (default: "memory"), DATABASE_URL,
     QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
-    INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000),
+    INTEL_BACKEND (default: "mock"; "abuseipdb" needs ABUSEIPDB_API_KEY),
+    TENANT_TOKEN_BUDGET_DAILY (default: 200000),
     API_HOST (default: "127.0.0.1"), API_PORT (default: 8000),
     RUN_WORKER_IN_API (default: true; false needs Postgres storage and a Redis queue),
     LOG_FORMAT (default: "json"; "console" for human-readable local logs),
@@ -45,6 +46,7 @@ class Settings(BaseSettings):
     queue_backend: Literal["memory", "redis"] = "memory"
     redis_url: str = "redis://localhost:6379/0"
     intel_backend: Literal["mock", "abuseipdb"] = "mock"
+    abuseipdb_api_key: SecretStr | None = None
     tenant_token_budget_daily: int = Field(default=200_000, gt=0)
     api_host: str = "127.0.0.1"
     api_port: int = Field(default=8000, gt=0, lt=65536)
@@ -66,6 +68,8 @@ class Settings(BaseSettings):
             raise ValueError("LLM_BACKEND=anthropic requires ANTHROPIC_API_KEY")
         if self.storage_backend == "postgres" and self.database_url is None:
             raise ValueError("STORAGE_BACKEND=postgres requires DATABASE_URL")
+        if self.intel_backend == "abuseipdb" and self.abuseipdb_api_key is None:
+            raise ValueError("INTEL_BACKEND=abuseipdb requires ABUSEIPDB_API_KEY")
         if self.auth_mode == "oidc" and not self.oidc_issuer:
             raise ValueError("AUTH_MODE=oidc requires OIDC_ISSUER")
         shared = self.storage_backend == "postgres" and self.queue_backend == "redis"

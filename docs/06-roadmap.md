@@ -82,7 +82,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 4.3 ✅ | PostgreSQL row-level security per tenant |
 | 4.4 ✅ | Access-review scheduled workflow |
 | 4.5 ✅ | Helm chart, HPA for API, KEDA for workers |
-| 4.6 | Optional real providers: AbuseIPDB, VirusTotal, GitHub Issues, Slack/Discord webhook |
+| 4.6 (part) ✅ | Optional real providers: **AbuseIPDB done**; VirusTotal, GitHub Issues, Slack/Discord webhook open |
 | 4.7 ✅ | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
 | 4.8 | Demo video + architecture diagram for the README |
 
