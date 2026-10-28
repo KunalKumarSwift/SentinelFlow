@@ -21,7 +21,12 @@ def seeded(client: TestClient, auth: TokenFor, container: ApiContainer) -> TestC
 def test_lists_workflows(client: TestClient, auth: TokenFor) -> None:
     response = client.get("/v1/workflows", headers=auth("soc-analyst-l1"))
     assert response.json() == [
-        {"name": "triage", "version": "1.0.0", "required_permission": "workflow:run:triage"}
+        {
+            "name": "containment",
+            "version": "1.0.0",
+            "required_permission": "workflow:run:containment",
+        },
+        {"name": "triage", "version": "1.0.0", "required_permission": "workflow:run:triage"},
     ]
 
 

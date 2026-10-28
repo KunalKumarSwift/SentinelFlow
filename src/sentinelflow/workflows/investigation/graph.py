@@ -34,7 +34,8 @@ def build_investigation_graph(deps: InvestigationDeps) -> InvestigationGraph:
     graph.add_edge("summarize", "analyse")
     graph.add_edge("analyse", "select")
     graph.add_edge("select", END)
-    return graph.compile()
+    # Never checkpoint: invoked inside a checkpointed lifecycle step, whose state is ids only.
+    return graph.compile(checkpointer=False)
 
 
 def run_investigation(

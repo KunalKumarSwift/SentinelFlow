@@ -42,7 +42,8 @@ def build_triage_graph(deps: TriageDeps) -> TriageGraph:
     graph.add_edge("score", "classify")
     graph.add_edge("classify", "decide")
     graph.add_edge("decide", END)
-    return graph.compile()
+    # Never checkpoint: invoked inside a checkpointed lifecycle step, whose state is ids only.
+    return graph.compile(checkpointer=False)
 
 
 def run_triage(graph: TriageGraph, incident: Incident, alert: Alert) -> TriageResult:

@@ -1,36 +1,31 @@
-"""State of the incident lifecycle graph (Phase 1: triage only)."""
+"""Checkpointed state of the lifecycle graph: identifiers only.
 
-from typing import NotRequired, TypedDict
+Domain objects live in repositories; steps load and save them. Checkpoints therefore
+stay tiny, JSON-safe and never go stale (see ADR 0007).
+"""
 
-from sentinelflow.domain.alerts import Alert
-from sentinelflow.domain.incidents import Incident
-from sentinelflow.domain.triage import TriageResult
-
-
-class LifecycleInput(TypedDict):
-    """What starts a lifecycle run."""
-
-    incident: Incident
-    alert: Alert
-
-
-class TriagedInput(TypedDict):
-    """What ``apply_triage_result`` reads."""
-
-    incident: Incident
-    triage: TriageResult
-
-
-class LifecycleUpdate(TypedDict, total=False):
-    """Partial state a lifecycle node returns."""
-
-    incident: Incident
-    triage: TriageResult
+from typing import NotRequired, Protocol, TypedDict
 
 
 class LifecycleState(TypedDict):
-    """All channels of the lifecycle graph."""
+    """Which run, tenant, incident and alert this lifecycle is about."""
 
-    incident: Incident
-    alert: Alert
-    triage: NotRequired[TriageResult]
+    run_id: str
+    tenant_id: str
+    incident_id: str
+    alert_id: str
+    approval_ids: NotRequired[list[str]]
+
+
+class LifecycleUpdate(TypedDict, total=False):
+    """Partial state a step returns."""
+
+    approval_ids: list[str]
+
+
+class Step(Protocol):
+    """A lifecycle node."""
+
+    def __call__(self, state: LifecycleState) -> LifecycleUpdate:
+        """Run the step."""
+        ...

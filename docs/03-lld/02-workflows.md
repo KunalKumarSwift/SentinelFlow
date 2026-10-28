@@ -60,11 +60,24 @@ class LifecycleState(TypedDict):
 Routing functions (`route_after_triage`, `route_after_investigation`) are pure functions
 of state, tested with a table of inputs → expected next node.
 
-**Phase 1 implementation** (`workflows/orchestrator/`): `START → triage → apply_triage → END`.
-`TriageStep` runs the compiled triage graph; `apply_triage_result` calls
-`domain.triage.apply_triage`, which sets severity and verdict and moves the incident to
-`TRIAGED` (or `CLOSED` for a false positive) through the lifecycle state machine.
-`run_lifecycle(graph, incident, alert) -> Incident` is the typed entry point.
+**Implementation** (`workflows/orchestrator/`, see ADR 0007):
+
+```
+START → triage ─┬─ (closed: false positive) → END
+                └─ investigate ─┬─ (no approvals requested) → END   [incident ESCALATED]
+                                └─ await_decisions ⟲ (any pending) → contain → END
+```
+
+| Step | Does |
+|---|---|
+| `triage` | `run_triage` → `apply_triage` → save + `incident.triaged` |
+| `investigate` | `run_investigation`; each proposed action goes through the tool guard (`action:propose` for the run's initiator) and becomes an `Approval`; incident → `AWAITING_APPROVAL` or `ESCALATED` |
+| `await_decisions` | Re-reads approvals (expiring overdue ones); if any pending → `interrupt()` |
+| `contain` | Executes each approved action via the tool guard (`action:execute`, quorum met) and `IdentityProvider.apply(action, idempotency_key)`; incident → `CONTAINED`, or `ESCALATED` if nothing was approved |
+
+State is identifiers only; steps load/save through repositories. `run_lifecycle(graph, run)`
+and `resume_lifecycle(graph, run_id)` return whether the run is still waiting. A repeated
+`StartRun` continues an unfinished thread or is a no-op for a finished one.
 
 ## 4. Triage
 

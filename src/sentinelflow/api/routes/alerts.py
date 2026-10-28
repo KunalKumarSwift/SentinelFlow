@@ -10,6 +10,7 @@ from sentinelflow.api.runs import enqueue_triage
 from sentinelflow.api.schemas.alerts import AlertAccepted, AlertIn
 from sentinelflow.domain.principals import Principal
 from sentinelflow.security.permissions import Permission
+from sentinelflow.security.system_principals import orchestrator_for
 
 
 def build_alerts_router(container: ApiContainer, auth: Auth) -> APIRouter:
@@ -27,7 +28,8 @@ def build_alerts_router(container: ApiContainer, auth: Auth) -> APIRouter:
         container.recorder().record(principal, "alert.ingested", result.alert_id, details)
         run_id = None
         if not result.deduplicated:
-            run_id = enqueue_triage(container, principal, result.incident)
+            system = orchestrator_for(principal.tenant_id)
+            run_id = enqueue_triage(container, principal, result.incident, system)
         return AlertAccepted(
             alert_id=result.alert_id,
             incident_id=result.incident_id,

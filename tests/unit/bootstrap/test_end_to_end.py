@@ -1,4 +1,4 @@
-"""Phase 1 demo path through the real wiring: alert in, triaged incident out."""
+"""Demo path through the real wiring: alert in, investigated incident awaiting approval out."""
 
 from collections.abc import Mapping
 
@@ -28,7 +28,7 @@ def _token(client: TestClient, identity: Mapping[str, object]) -> dict[str, str]
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_brute_force_alert_is_triaged_by_the_worker() -> None:
+def test_brute_force_alert_is_triaged_and_investigated_by_the_worker() -> None:
     runtime = build_runtime(SETTINGS, demo_seed=42)
     client = TestClient(create_app(runtime.container))
     alert = SCENARIOS["brute_force"](make_context(42)).alerts[0]
@@ -38,7 +38,7 @@ def test_brute_force_alert_is_triaged_by_the_worker() -> None:
     incident_id = accepted.json()["incident_id"]
     body = client.get(f"/v1/incidents/{incident_id}", headers=_token(client, ANALYST)).json()
     assert (body["status"], body["severity"], body["verdict"]) == (
-        "triaged",
+        "awaiting_approval",
         "high",
         "needs_review",
     )

@@ -1,47 +1,31 @@
-"""Handle ``StartRun``: load the incident and alert, run the lifecycle, save the result."""
+"""Handle ``StartRun``: run the lifecycle for a queued run and record the run's status."""
 
-from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository
 from sentinelflow.contracts.run_queue import StartRun
+from sentinelflow.contracts.runs import RunRepository
+from sentinelflow.core.clock import Clock
 from sentinelflow.domain.errors import NotFoundError
-from sentinelflow.security.audit_recorder import AuditRecorder
-from sentinelflow.security.system_principals import orchestrator_for
+from sentinelflow.domain.runs import RunStatus, with_status
 from sentinelflow.workflows.orchestrator import run_lifecycle
 from sentinelflow.workflows.orchestrator.graph import LifecycleGraph
 
 
 class StartRunHandler:
-    """Runs the incident lifecycle for a queued command."""
+    """Runs the incident lifecycle; the run ends ``WAITING`` (approvals) or ``COMPLETED``."""
 
-    def __init__(
-        self,
-        alerts: AlertRepository,
-        incidents: IncidentRepository,
-        graph: LifecycleGraph,
-        recorder: AuditRecorder,
-    ) -> None:
-        """Wire the repositories, the compiled lifecycle graph and the audit recorder."""
-        self._alerts, self._incidents, self._graph = alerts, incidents, graph
-        self._recorder = recorder
+    def __init__(self, runs: RunRepository, graph: LifecycleGraph, clock: Clock) -> None:
+        """Wire the run repository, the compiled lifecycle graph and the clock."""
+        self._runs, self._graph, self._clock = runs, graph, clock
 
     def __call__(self, command: StartRun) -> None:
-        """Run the lifecycle and persist the updated incident.
+        """Run the lifecycle for ``command.run_id``.
 
         Raises:
-            NotFoundError: If the incident or alert no longer exists (not retryable).
+            NotFoundError: If the run record does not exist (not retryable).
         """
-        incident = self._incidents.get(command.tenant_id, command.incident_id)
-        if incident is None:
-            raise NotFoundError(f"incident {command.incident_id} not found")
-        stored = self._alerts.get(command.tenant_id, command.alert_id)
-        if stored is None:
-            raise NotFoundError(f"alert {command.alert_id} not found")
-        updated = run_lifecycle(self._graph, incident, stored.alert)
-        self._incidents.update(updated)
-        details = {
-            "run_id": command.run_id,
-            "status": updated.status.value,
-            "severity": str(updated.severity),
-            "verdict": "" if updated.verdict is None else updated.verdict.value,
-        }
-        actor = orchestrator_for(command.tenant_id)
-        self._recorder.record(actor, "incident.triaged", updated.id, details)
+        record = self._runs.get(command.tenant_id, command.run_id)
+        if record is None:
+            raise NotFoundError(f"run {command.run_id} not found")
+        self._runs.update(with_status(record, RunStatus.RUNNING, self._clock.now()))
+        waiting = run_lifecycle(self._graph, record)
+        status = RunStatus.WAITING if waiting else RunStatus.COMPLETED
+        self._runs.update(with_status(record, status, self._clock.now()))

@@ -62,6 +62,12 @@ class WorkflowRegistry:
 DEFAULT_REGISTRY = WorkflowRegistry(
     [
         WorkflowDefinition(
+            name="containment",
+            version="1.0.0",
+            required_permission=Permission.RUN_CONTAINMENT,
+            max_scope=frozenset({Permission.ACTION_PROPOSE, Permission.ACTION_EXECUTE}),
+        ),
+        WorkflowDefinition(
             name="triage",
             version="1.0.0",
             required_permission=Permission.RUN_TRIAGE,
