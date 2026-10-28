@@ -3,7 +3,8 @@
 #   docker compose up --build --scale worker=3
 #   uv run python scripts/smoke_test.py --api http://127.0.0.1:8000
 #
-# `docker compose --profile llm up` also starts Ollama; set LLM_BACKEND=ollama to use it.
+# `--profile llm` also starts Ollama (set LLM_BACKEND=ollama to use it);
+# `--profile observability` adds Prometheus (:9090) and Grafana (:3000, dashboard provisioned).
 
 x-app: &app
   build: .
@@ -54,6 +55,21 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       retries: 10
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [observability]
+    volumes: ["./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    profiles: [observability]
+    environment: { GF_AUTH_ANONYMOUS_ENABLED: "true", GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer }
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
 
   ollama:
     image: ollama/ollama:0.5.4

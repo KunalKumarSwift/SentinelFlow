@@ -1,0 +1,11 @@
+# Scrapes the API (/metrics on :8000) and every worker (/metrics on :9100).
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: sentinelflow-api
+    static_configs: [{ targets: ["api:8000"] }]
+  - job_name: sentinelflow-worker
+    dns_sd_configs:
+      - names: ["worker"]
+        type: A
+        port: 9100

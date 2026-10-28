@@ -69,7 +69,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 3.3 ✅ | Rate limiting + LLM budget decorator | 429 after limit; `BudgetExceededError` → NEEDS_REVIEW |
 | 3.4 ✅ | structlog + correlation IDs | Log line contains run_id/tenant_id |
 | 3.5 | OpenTelemetry + Jaeger; Langfuse callback | Span created per node (in-memory exporter) |
-| 3.6 | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |
+| 3.6 ✅ | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |
 | 3.7 | Locust load test + `docs/benchmarks.md` | — (measurement) |
 | 3.8 | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
 

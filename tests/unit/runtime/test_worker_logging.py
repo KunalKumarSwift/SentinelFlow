@@ -8,6 +8,7 @@ from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.runtime.worker import Worker
 from tests.builders import T0
 from tests.fakes.fake_clock import FakeClock
+from tests.fakes.fake_metrics import RecordingMetrics
 from tests.fakes.log_capture import capture_logs
 
 CMD = StartRun("run-1", "acme", "triage", "inc-1", "alt-1", "svc-orchestrator")
@@ -42,3 +43,18 @@ def test_retry_and_dead_letter_are_logged() -> None:
     assert logs.named("run.command.retry")[0]["error"] == "ProviderError"
     dead = logs.named("run.command.dead_lettered")[0]
     assert (dead["run_id"], dead["reason"]) == ("run-1", "incident inc-1 not found")
+
+
+def test_outcomes_are_reported_as_metrics() -> None:
+    metrics = RecordingMetrics()
+    for error in (None, ProviderError("t", retryable=True), NotFoundError("gone")):
+
+        def handler(_: RunCommand, error: Exception | None = error) -> None:
+            if error is not None:
+                raise error
+
+        queue = MemoryRunQueue(FakeClock(T0), timedelta(seconds=60))
+        queue.publish(CMD)
+        Worker(queue, handler, "w1", metrics=metrics).run_once()
+    outcomes = [call[2] for call in metrics.calls]
+    assert outcomes == ["done", "retry", "dead_lettered"]

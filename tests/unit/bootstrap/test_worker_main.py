@@ -8,6 +8,7 @@ from collections.abc import Iterator
 import pytest
 from pydantic import SecretStr
 
+from sentinelflow.bootstrap.wiring import Runtime
 from sentinelflow.bootstrap.worker_main import install_stop_signals, run_worker
 from sentinelflow.core.config import Settings
 from tests.contracts.pg import database_url
@@ -48,6 +49,7 @@ def test_worker_returns_once_stopped() -> None:
         redis_url=redis_url,
         run_worker_in_api=False,
     )
-    stop = threading.Event()
+    stop, started = threading.Event(), list[Runtime]()
     stop.set()
-    run_worker(settings, stop)
+    run_worker(settings, stop, started.append)
+    assert len(started) == 1

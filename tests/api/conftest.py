@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 
 from sentinelflow.api.app import create_app
 from sentinelflow.api.container import ApiContainer
+from sentinelflow.contracts.metrics import Metrics
 from sentinelflow.domain.principals import Principal, PrincipalKind
+from sentinelflow.providers.metrics.null_metrics import NullMetrics
 from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
 from sentinelflow.providers.storage.memory_approvals import MemoryApprovalRepository
@@ -36,7 +38,10 @@ def tokens() -> Hs256TokenService:
 
 
 def make_container(
-    tokens: Hs256TokenService, app_env: str = "dev", throttle: Throttle | None = None
+    tokens: Hs256TokenService,
+    app_env: str = "dev",
+    throttle: Throttle | None = None,
+    metrics: Metrics | None = None,
 ) -> ApiContainer:
     """Return a container wired with in-memory parts and deterministic ids/time."""
     clock, ids = FakeClock(T0), SequentialIdFactory()
@@ -60,6 +65,7 @@ def make_container(
         redactor=Redactor(b"r" * 32),
         ticketing=MemoryTicketing(),
         throttle=throttle,
+        metrics=metrics or NullMetrics(),
     )
 
 

@@ -156,6 +156,15 @@ approvals, action execution.
 - **Traces:** OpenTelemetry → Jaeger; LLM traces → Langfuse (self-hosted).
 - **Metrics:** Prometheus (`runs_total`, `run_duration_seconds`, `queue_depth`,
   `policy_denials_total`, `llm_tokens_total`) → Grafana dashboard.
+  *Built (3.6):* behind `contracts/metrics.Metrics` (`PrometheusMetrics` on a per-process
+  registry, `NullMetrics`, a recording fake in tests): `sentinelflow_run_commands_total` /
+  `_run_command_seconds` {command, outcome} from the worker,
+  `sentinelflow_http_requests_total` / `_http_request_seconds` {group, status} from the API
+  middleware, `sentinelflow_audit_events_total{verb}` from an audit-store decorator (policy
+  denials are `verb="policy.denied"`), `sentinelflow_llm_tokens_total{tenant_id}` from
+  `BudgetedLLM`. The API serves `GET /metrics`; workers serve `:METRICS_PORT/metrics`.
+  `deploy/` holds the Prometheus scrape config and a provisioned Grafana dashboard
+  (`docker compose --profile observability up`). Queue depth is read from Redis by KEDA.
 
 ## 9. Technology choices
 
