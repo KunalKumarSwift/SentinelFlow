@@ -10,7 +10,8 @@ which starts a `postgres:16` service).
 are `jsonb` columns, so a row maps 1:1 to a frozen domain object and the mapping code
 stays small; everything the application filters or sorts by is a real column. The
 executable schema is `providers/storage/postgres/schema.sql` (idempotent, applied at
-start-up by `pool.apply_schema`). Values read back are type-checked by `rows.py`
+start-up by `pool.apply_schema` under an advisory lock, so processes starting together
+cannot race in the catalog). Values read back are type-checked by `rows.py`
 accessors, so schema drift fails loudly. The fully normalised design below is the
 target for when approvals or actions need querying on their own.
 

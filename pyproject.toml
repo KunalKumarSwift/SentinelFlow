@@ -38,6 +38,7 @@ dev = [
     "ruff>=0.8",
     "pyright>=1.1.390",
     "import-linter>=2.1",
+    "locust>=2.32",
 ]
 
 [build-system]
@@ -77,6 +78,7 @@ ignore = ["D203", "D213"]
 # S311: seeded, reproducible randomness is the point of the simulator, not security.
 "tests/**" = ["S101", "D", "S311"]
 "src/sentinelflow/simulator/**" = ["S311"]
+"scripts/load/**" = ["S311"]
 "scripts/**" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]

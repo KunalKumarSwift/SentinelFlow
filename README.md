@@ -101,6 +101,7 @@ Choose an LLM for real verdicts:
 | [04 Engineering Guidelines](docs/04-engineering-guidelines.md) | TDD workflow, coding principles, file-size and style rules |
 | [05 Testing Strategy](docs/05-testing-strategy.md) | Test pyramid, fakes, security test matrix, LLM evaluation |
 | [06 Roadmap](docs/06-roadmap.md) | Phased delivery plan as small TDD slices |
+| [Benchmarks](docs/benchmarks.md) | Measured API latency and worker throughput (1 → 4 workers) |
 | [ADRs](docs/adr/README.md) | Architecture decision records |
 
 ## Tech stack (planned)

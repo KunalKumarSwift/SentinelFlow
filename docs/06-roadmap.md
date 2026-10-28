@@ -60,7 +60,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 
 **Demo:** leaked-key scenario → commander + second approver → key revoked → report; audit verifies.
 
-## Phase 3 — Scale and observe
+## Phase 3 — Scale and observe ✅
 
 | Slice | Deliverable | First tests |
 |---|---|---|
@@ -70,7 +70,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 3.4 ✅ | structlog + correlation IDs | Log line contains run_id/tenant_id |
 | 3.5 ✅ | OpenTelemetry + Jaeger (Langfuse callback deferred) | Span created per node (in-memory exporter) |
 | 3.6 ✅ | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |
-| 3.7 | Locust load test + `docs/benchmarks.md` | — (measurement) |
+| 3.7 ✅ | Locust load test + [`docs/benchmarks.md`](benchmarks.md) | — (measurement; found and fixed a start-up schema race) |
 | 3.8 ✅ | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
 
 ## Phase 4 — Production-grade identity and deployment
