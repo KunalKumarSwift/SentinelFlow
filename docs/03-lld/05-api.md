@@ -28,9 +28,9 @@ to domain objects at the edge.
 | POST | `/v1/incidents/{id}/close` | `incident:close` | Close / escalate with a reason |
 | GET | `/v1/workflows` | `incident:read` | Registry listing: name, version, required permission ✅ |
 | POST | `/v1/workflows/{name}/runs` | `workflow:run:<name>` | 202. Queue a run; unknown workflow/incident → 404, incident not `NEW` → 409 ✅ |
-| GET | `/v1/runs/{run_id}` | `incident:read` | Run status: `queued/running/waiting/completed/failed` (Phase 2, needs run records) |
-| GET | `/v1/approvals` | `action:approve:*` (any) | Pending approvals the caller is eligible for |
-| POST | `/v1/approvals/{id}/decision` | `action:approve:<impact>` | Approve / reject with reason |
+| GET | `/v1/runs/{run_id}` | `incident:read` | Run status `queued/running/waiting/completed/failed` and initiator ✅ |
+| GET | `/v1/approvals` | `action:approve:*` (any) | Pending approvals the policy engine says the caller may decide (role by impact, team, no self-action, SoD) ✅ |
+| POST | `/v1/approvals/{id}/decision` | `action:approve:<impact>` | Approve / reject with reason; denials audited; a closed approval queues `ResumeRun` ✅ |
 | GET | `/v1/audit` | `audit:read` | Tenant's audit events, paged by `after_seq` + `limit` (≤ 500) ✅ |
 | GET | `/v1/audit/verify` | `audit:verify` | Re-hash the tenant's whole chain → `{ok, first_bad_seq, checked}` ✅ |
 | GET | `/healthz` | none | Liveness |
@@ -90,21 +90,15 @@ class IncidentOut(BaseModel):
 | 503 | `ProviderError` | An external provider failed |
 | 500 | anything else | Generic `detail: "unexpected error"`; internal messages are never leaked |
 
-## 5. Approval decision flow (service layer)
+## 5. Approval decision flow (`api/approval_service.py`)
 
-```python
-def decide(approval_id: str, body: DecisionIn, principal: Principal) -> Approval:
-    approval = approvals.get(approval_id, tenant_id=principal.tenant_id)   # 404 if absent
-    action = actions.get(approval.action_id)
-    request = AccessRequest(principal, f"action:approve:{action.impact}", resource_of(action), context_of(approval))
-    decision = policy.evaluate(request)
-    audit.record_policy(decision, request)
-    if not decision.allowed:
-        raise PolicyDeniedError(decision.reason)
-    updated = record_decision(approval, ApprovalDecision(principal.subject, body.approved, body.reason, clock.now()))
-    approvals.update(updated)
-    queue.publish(ResumeRun(run_id=approval.run_id, approval_id=approval.id))
-    return updated
-```
+1. Load the approval for the caller's tenant (404 otherwise) and expire it if overdue.
+2. `api/approval_policy.decision_for` builds an `AccessRequest` with permission
+   `action:approve:<impact>`, the incident as resource (team scope) and an `ActionContext`
+   (target user, proposer, run initiator, prior approvers, still open) and asks the policy
+   engine. Deny → `policy.denied` audit + 403 with the reason.
+3. `record_decision` (any rejection rejects; quorum approves) → save → `approval.decided` audit.
+4. If the approval left `PENDING`, publish `ResumeRun(run_id)`; the worker re-reads every
+   approval of the run, so the resume message carries no authority of its own.
 
-(Shown as one block for readability; the real code splits it into three ≤ 20-line functions.)
+Deciding twice or deciding a closed approval is denied by the ABAC rules (403 with reason).

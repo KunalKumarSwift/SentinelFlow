@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from sentinelflow.api.container import ApiContainer
+from sentinelflow.contracts.run_queue import StartRun
 from tests.api.conftest import TokenFor
 from tests.api.payloads import ALERT
 
@@ -19,6 +20,7 @@ def test_new_alert_opens_incident_and_queues_triage(
         "run-0001",
     )
     [delivery] = container.queue.claim("test", max_items=10)
+    assert isinstance(delivery.command, StartRun)
     assert (delivery.command.workflow, delivery.command.incident_id) == ("triage", "inc-0001")
 
 

@@ -14,8 +14,11 @@ from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.llm_facade import make_llm
+from sentinelflow.runtime.dispatch import Dispatcher
+from sentinelflow.runtime.resume_handler import ResumeRunHandler
 from sentinelflow.runtime.start_handler import StartRunHandler
 from sentinelflow.runtime.worker import Worker
+from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tokens import Hs256TokenService
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
@@ -41,7 +44,11 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     _require_memory_backends(settings)
     stores = Stores(SystemClock())
     graph = build_lifecycle(stores, make_llm(settings), demo_seed)
-    worker = Worker(stores.queue, StartRunHandler(stores.runs, graph, stores.clock), "worker-1")
+    handler = Dispatcher(
+        StartRunHandler(stores.runs, graph, stores.clock),
+        ResumeRunHandler(stores.runs, graph, stores.clock),
+    )
+    worker = Worker(stores.queue, handler, "worker-1")
     return Runtime(_container(settings, stores), worker)
 
 
@@ -56,6 +63,8 @@ def _container(settings: Settings, stores: Stores) -> ApiContainer:
         registry=DEFAULT_REGISTRY,
         queue=stores.queue,
         runs=stores.runs,
+        approvals=stores.approvals,
+        policy=InCodePolicyEngine(),
         ids=ids,
         audit=stores.audit,
         clock=stores.clock,
