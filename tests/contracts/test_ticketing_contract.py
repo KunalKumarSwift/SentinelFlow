@@ -6,8 +6,13 @@ import pytest
 
 from sentinelflow.contracts.ticketing import TicketingProvider
 from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
+from sentinelflow.providers.ticketing.pg_ticketing import PgTicketing
+from tests.contracts.pg import fresh_pool
 
-IMPLEMENTATIONS: list[Callable[[], TicketingProvider]] = [MemoryTicketing]
+IMPLEMENTATIONS: list[Callable[[], TicketingProvider]] = [
+    MemoryTicketing,
+    lambda: PgTicketing(fresh_pool()),
+]
 
 
 @pytest.fixture(params=IMPLEMENTATIONS)

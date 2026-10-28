@@ -111,14 +111,26 @@ open/closed principle in action: no workflow code changes.
 | Load | Scale action |
 |---|---|
 | More alerts/s | More API replicas (stateless); dedup cache in Redis |
-| Longer queue | More workers (KEDA on `XPENDING` / stream length) |
+| Longer queue | More workers (KEDA on the size of `sf:runs:visible`) |
 | Slow LLM | More workers (I/O bound); async providers in Phase 3 |
 | Hot tenant | Per-tenant rate limit and budget isolate noisy neighbours |
 
 Target for the load test (Phase 3): 1 000 alerts in 60 s with 4 workers and `FakeLLM`
 (measures platform overhead, not LLM latency), then a smaller run with Ollama.
 
+**Process layout (built, slice 3.2):** `sentinelflow-api` serves HTTP and, unless
+`RUN_WORKER_IN_API=false`, runs a worker thread. `sentinelflow-worker`
+(`bootstrap/worker_main.py`) is a worker-only process. Splitting them requires shared
+state, so `Settings` rejects `RUN_WORKER_IN_API=false` unless `STORAGE_BACKEND=postgres`
+and `QUEUE_BACKEND=redis`, and the worker refuses a memory queue. Tickets move to
+PostgreSQL (`PgTicketing`) with the other stores, so a report written by a worker is
+readable from every API replica. `docker-compose.yml` runs one API, two workers (scale with
+`--scale worker=N`), Postgres and Redis from one non-root image (`Dockerfile`);
+`scripts/smoke_test.py` posts an alert and waits for the run to pause for approval.
+
 ## 8. Graceful shutdown
 
-On SIGTERM: stop claiming, finish the current node (LangGraph checkpoints after each
-super-step), do **not** ack unfinished work, exit. Another worker resumes it.
+On SIGTERM (built: `install_stop_signals`): stop claiming, finish the current batch
+(LangGraph checkpoints after each super-step), do **not** ack unfinished work, exit.
+A command killed mid-flight becomes claimable again after the visibility timeout and
+another worker resumes it from its checkpoint.

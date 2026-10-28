@@ -10,7 +10,7 @@ from sentinelflow.providers.storage.postgres.pg_audit import PgAuditStore
 from sentinelflow.providers.storage.postgres.pg_incidents import PgIncidentRepository
 from sentinelflow.providers.storage.postgres.pg_runs import PgRunRepository
 from sentinelflow.providers.storage.postgres.pool import apply_schema, open_pool
-from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
+from sentinelflow.providers.ticketing.pg_ticketing import PgTicketing
 
 
 def postgres_stores(clock: Clock, url: str, queue: RunQueue) -> Stores:
@@ -25,6 +25,6 @@ def postgres_stores(clock: Clock, url: str, queue: RunQueue) -> Stores:
         runs=PgRunRepository(pool),
         audit=PgAuditStore(pool),
         checkpointer=open_checkpointer(url),
-        ticketing=MemoryTicketing(),
+        ticketing=PgTicketing(pool),
         queue=queue,
     )
