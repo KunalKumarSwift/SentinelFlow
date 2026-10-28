@@ -19,3 +19,7 @@ class InvalidValueError(DomainError):
 
 class UnknownRuleError(DomainError):
     """An alert names a detection rule the system has no severity mapping for."""
+
+
+class InvalidTransitionError(DomainError):
+    """An incident was asked to move to a status its lifecycle does not allow."""

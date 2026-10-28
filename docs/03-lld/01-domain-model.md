@@ -129,7 +129,8 @@ Each rule is one small pure function in `domain/` with its own test file.
 | `apply_verdict(incident, result) -> Incident` | Returns a new incident with status `TRIAGED` or `CLOSED` |
 | `approval_requirement(kind, severity)` | Catalogue above |
 | `record_decision(approval, decision) -> Approval` | Appends a decision; computes the new status |
-| `next_status(current, event) -> IncidentStatus` | Explicit state machine; illegal transitions raise `InvalidTransitionError` |
+| `next_status(current, event) -> IncidentStatus` | Explicit state machine (`domain/lifecycle.py`); events are `IncidentEvent` values; anything not in the table raises `InvalidTransitionError` |
+| `transition(incident, event) -> Incident` | Returns a copy with the new status |
 
 ### Severity scoring
 
