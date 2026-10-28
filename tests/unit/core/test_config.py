@@ -15,6 +15,8 @@ MANAGED_VARS = (
     "QUEUE_BACKEND",
     "RUN_WORKER_IN_API",
     "LOG_FORMAT",
+    "AUTH_MODE",
+    "OIDC_ISSUER",
 )
 
 
@@ -105,3 +107,12 @@ def test_logs_are_json_unless_console_is_chosen(monkeypatch: pytest.MonkeyPatch)
     assert load_settings().log_format == "json"
     monkeypatch.setenv("LOG_FORMAT", "console")
     assert load_settings().log_format == "console"
+
+
+def test_oidc_mode_requires_an_issuer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    monkeypatch.setenv("AUTH_MODE", "oidc")
+    with pytest.raises(ValidationError, match="OIDC_ISSUER"):
+        load_settings()
+    monkeypatch.setenv("OIDC_ISSUER", "http://keycloak:8080/realms/sentinelflow")
+    assert load_settings().auth_mode == "oidc"

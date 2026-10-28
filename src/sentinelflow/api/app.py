@@ -26,7 +26,8 @@ def create_app(container: ApiContainer) -> FastAPI:
     app = FastAPI(title="SentinelFlow", version=__version__)
     problems.install(app)
     correlation.install(app, container.ids, container.clock, container.metrics)
-    auth = Auth(container.tokens, container.recorder(), container.throttle)
+    verifier = container.verifier or container.tokens
+    auth = Auth(verifier, container.recorder(), container.throttle)
     app.include_router(build_health_router(container.metrics))
     app.include_router(build_alerts_router(container, auth))
     app.include_router(build_incidents_router(container, auth))

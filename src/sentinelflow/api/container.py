@@ -17,6 +17,7 @@ from sentinelflow.security.policy import PolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
+from sentinelflow.security.verifier import TokenVerifier
 from sentinelflow.workflows.ingestion import IngestionService
 from sentinelflow.workflows.registry import WorkflowRegistry
 
@@ -28,6 +29,7 @@ class ApiContainer:
     Attributes:
         app_env: ``"dev"`` enables the dev-token endpoint; any other value hides it.
         throttle: Per-tenant rate limits; ``None`` disables them (tests, tools).
+        verifier: Bearer-token verifier (OIDC in production); ``None`` means ``tokens``.
     """
 
     app_env: str
@@ -46,6 +48,7 @@ class ApiContainer:
     ticketing: TicketingProvider
     throttle: Throttle | None = None
     metrics: Metrics = field(default_factory=NullMetrics)
+    verifier: TokenVerifier | None = None
 
     def recorder(self) -> AuditRecorder:
         """Return an audit recorder bound to this container's store and clock."""

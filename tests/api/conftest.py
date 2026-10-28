@@ -22,6 +22,7 @@ from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.throttle import Throttle
 from sentinelflow.security.tokens import Hs256TokenService
+from sentinelflow.security.verifier import TokenVerifier
 from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
 from sentinelflow.workflows.registry import DEFAULT_REGISTRY
 from tests.builders import T0
@@ -42,6 +43,7 @@ def make_container(
     app_env: str = "dev",
     throttle: Throttle | None = None,
     metrics: Metrics | None = None,
+    verifier: TokenVerifier | None = None,
 ) -> ApiContainer:
     """Return a container wired with in-memory parts and deterministic ids/time."""
     clock, ids = FakeClock(T0), SequentialIdFactory()
@@ -66,6 +68,7 @@ def make_container(
         ticketing=MemoryTicketing(),
         throttle=throttle,
         metrics=metrics or NullMetrics(),
+        verifier=verifier,
     )
 
 

@@ -141,6 +141,10 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `LOG_FORMAT` | `json` | `json` lines or human-readable `console` |
 | `METRICS_PORT` | `9100` | Port of a worker's Prometheus endpoint |
 | `OTLP_ENDPOINT` | — | OTLP/HTTP collector, e.g. `http://jaeger:4318`; unset = tracing off |
+| `AUTH_MODE` | `hs256` | `oidc` verifies Keycloak RS256 tokens instead of dev tokens |
+| `OIDC_ISSUER` | — | Expected `iss`, e.g. `http://localhost:8080/realms/sentinelflow` (required for `oidc`) |
+| `OIDC_AUDIENCE` | `sentinelflow-api` | Expected `aud` |
+| `OIDC_JWKS_URL` | `<issuer>/protocol/openid-connect/certs` | Where signing keys are fetched |
 
 ## 5. Adding a new provider (checklist)
 

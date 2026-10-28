@@ -5,6 +5,7 @@ from sentinelflow.bootstrap._stores import Stores
 from sentinelflow.contracts.metrics import Metrics
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
+from sentinelflow.facades.auth_facade import make_verifier
 from sentinelflow.facades.shared_state_facade import make_rate_limiter
 from sentinelflow.security.policy_engine import InCodePolicyEngine
 from sentinelflow.security.redaction import Redactor
@@ -39,4 +40,5 @@ def build_container(
         ticketing=stores.ticketing,
         throttle=Throttle(make_rate_limiter(settings, stores.clock)),
         metrics=metrics,
+        verifier=make_verifier(settings, stores.clock),
     )
