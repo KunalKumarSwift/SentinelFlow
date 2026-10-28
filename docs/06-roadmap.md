@@ -71,7 +71,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 3.5 ✅ | OpenTelemetry + Jaeger (Langfuse callback deferred) | Span created per node (in-memory exporter) |
 | 3.6 ✅ | Prometheus metrics + Grafana dashboard JSON | Metric increments on run completion |
 | 3.7 | Locust load test + `docs/benchmarks.md` | — (measurement) |
-| 3.8 | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
+| 3.8 ✅ | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
 
 ## Phase 4 — Production-grade identity and deployment
 
