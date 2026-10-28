@@ -52,3 +52,7 @@ class AuthorizationError(SentinelFlowError):
 
 class PolicyDeniedError(AuthorizationError):
     """The policy engine denied a request; the message is the human-readable reason."""
+
+
+class UnknownActionError(DomainError):
+    """A requested action is not in the action catalogue (the allow-list)."""

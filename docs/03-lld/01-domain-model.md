@@ -110,12 +110,18 @@ list; anything else is rejected by validation.
 | `REVOKE_ACCESS_KEY` | access_key_id | HIGH | `incident-commander` | 1 (2 if incident is CRITICAL) |
 | `ISOLATE_HOST` | host | HIGH | `incident-commander` | 1 (2 if incident is CRITICAL) |
 
-Implemented as a dictionary constant in `domain/actions.py` plus one pure function:
+Implemented as data in `domain/actions_table.py` (`CATALOGUE`, `APPROVER_ROLE`) plus pure
+functions in `domain/actions.py`:
 
 ```python
-def approval_requirement(kind: ActionKind, severity: Severity) -> ApprovalRequirement:
-    """Return which role and how many distinct approvers an action needs."""
+def approval_requirement(kind: ActionKind, severity: Severity) -> ApprovalRequirement: ...
+def target_of(kind: ActionKind, entities: Entities) -> str | None: ...
+def parse_action_kind(value: str) -> ActionKind:  # raises UnknownActionError
+    ...
 ```
+
+`ProposedAction.impact` is a property read from the catalogue, so a proposer (or an LLM)
+can never understate an action's impact to lower its approval bar.
 
 ## 4. Pure business rules
 
