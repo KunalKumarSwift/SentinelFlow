@@ -97,9 +97,9 @@ An asset lookup joins the parallel enrichment later.
 
 | Node | Kind | Does |
 |---|---|---|
-| `fetch_related_events` | provider | Queries the event store: same user/IP/host ±24 h |
-| `build_timeline` | pure | Sorts and summarises events into `TimelineEntry` items |
-| `retrieve_techniques` | provider | Retrieves candidate MITRE ATT&CK techniques (keyword index in Phase 2, vector store later) |
+| `fetch_related_events` | provider | `EventStore.related_events(EventQuery)`: same tenant, any shared entity value, ±24 h |
+| `build_timeline` | pure | `domain.timeline.build_timeline`: time-ordered `TimelineEntry` items; consecutive repeats collapse ("login_failed x42") |
+| `retrieve_techniques` | pure | `domain.attack.candidate_techniques`: keyword overlap with a curated 8-technique ATT&CK table (vector index later) |
 | `analyse_with_llm` | LLM | Structured output: narrative, chosen techniques (must be from candidates), suggested `ActionKind`s |
 | `select_actions` | pure | Intersects suggestions with the playbook for the rule and the action catalogue; builds `ProposedAction`s |
 
