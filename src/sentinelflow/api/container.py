@@ -7,6 +7,7 @@ from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.repositories import IncidentRepository
 from sentinelflow.contracts.run_queue import RunQueue
 from sentinelflow.contracts.runs import RunRepository
+from sentinelflow.contracts.ticketing import TicketingProvider
 from sentinelflow.core.clock import Clock
 from sentinelflow.core.ids import IdFactory
 from sentinelflow.security.audit_recorder import AuditRecorder
@@ -38,6 +39,7 @@ class ApiContainer:
     audit: AuditStore
     clock: Clock
     redactor: Redactor
+    ticketing: TicketingProvider
 
     def recorder(self) -> AuditRecorder:
         """Return an audit recorder bound to this container's store and clock."""

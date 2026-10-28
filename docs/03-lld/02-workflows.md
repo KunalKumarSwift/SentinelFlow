@@ -64,8 +64,8 @@ of state, tested with a table of inputs → expected next node.
 
 ```
 START → triage ─┬─ (closed: false positive) → END
-                └─ investigate ─┬─ (no approvals requested) → END   [incident ESCALATED]
-                                └─ await_decisions ⟲ (any pending) → contain → END
+                └─ investigate ─┬─ (no approvals requested) ─────────────────┐  [ESCALATED]
+                                └─ await_decisions ⟲ (pending) → contain ────┴→ report → END
 ```
 
 | Step | Does |
@@ -74,6 +74,7 @@ START → triage ─┬─ (closed: false positive) → END
 | `investigate` | `run_investigation`; each proposed action goes through the tool guard (`action:propose` for the run's initiator) and becomes an `Approval`; incident → `AWAITING_APPROVAL` or `ESCALATED` |
 | `await_decisions` | Re-reads approvals (expiring overdue ones); if any pending → `interrupt()` |
 | `contain` | Executes each approved action via the tool guard (`action:execute`, quorum met) and `IdentityProvider.apply(action, idempotency_key)`; incident → `CONTAINED`, or `ESCALATED` if nothing was approved |
+| `report` | Writes the post-incident report as a ticket; `CONTAINED` → `CLOSED` (escalated incidents stay open for an analyst) |
 
 State is identifiers only; steps load/save through repositories. `run_lifecycle(graph, run)`
 and `resume_lifecycle(graph, run_id)` return whether the run is still waiting. A repeated
@@ -147,13 +148,14 @@ decision, and enqueues `ResumeRun(run_id, decision)`. A worker calls
 `graph.invoke(Command(resume=decision), config)`. Quorum is recomputed from stored
 decisions — the resume payload is only a trigger, never trusted for the decision itself.
 
-## 7. Report
+## 7. Report (`workflows/report/`, run by the lifecycle `report` step)
 
-| Node | Does |
+| Piece | Does |
 |---|---|
-| `collect_facts` | Pure: gathers triage, timeline, techniques, actions, approvals from state |
-| `write_report` | LLM: Markdown report from a fixed template; facts passed as data |
-| `attach_ticket` | Provider: creates/updates a ticket with the report |
+| `collect_facts` | Pure: incident status/severity/verdict + the incident's own audit events (`incident.triaged`, `incident.investigated`, `incident.contained`) + the run's approvals → `ReportFacts`; user targets pseudonymised |
+| `render_facts` (`domain/report.py`) | Deterministic "Facts (verified from the audit trail)" Markdown section |
+| `write_report` | LLM narrative (`report.write`, facts passed as untrusted data) **followed by** the verified facts; on `ProviderError` the facts alone |
+| ticket | `TicketingProvider.upsert(tenant, incident, title, body)`; readable via `GET /v1/incidents/{id}/report` |
 
 ## 8. Access review (scheduled)
 

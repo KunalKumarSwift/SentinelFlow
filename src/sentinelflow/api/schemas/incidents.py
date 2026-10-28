@@ -38,3 +38,11 @@ class IncidentPage(BaseModel):
     """A list of incidents."""
 
     items: list[IncidentOut]
+
+
+class ReportOut(BaseModel):
+    """A post-incident report."""
+
+    ticket_id: str
+    title: str
+    body: str

@@ -3,13 +3,17 @@
 from dataclasses import dataclass
 
 from sentinelflow.contracts.approvals import ApprovalRepository
+from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.identity import IdentityProvider
+from sentinelflow.contracts.llm import LLMProvider
 from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository
 from sentinelflow.contracts.runs import RunRepository
+from sentinelflow.contracts.ticketing import TicketingProvider
 from sentinelflow.core.clock import Clock
 from sentinelflow.core.ids import IdFactory
 from sentinelflow.security.audit_recorder import AuditRecorder
 from sentinelflow.security.permissions import Permission
+from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tool_guard import ToolGuard
 from sentinelflow.workflows.investigation.graph import InvestigationGraph
 from sentinelflow.workflows.triage.graph import TriageGraph
@@ -35,3 +39,7 @@ class LifecycleDeps:
     clock: Clock
     ids: IdFactory
     containment_scope: frozenset[Permission]
+    llm: LLMProvider
+    audit: AuditStore
+    ticketing: TicketingProvider
+    redactor: Redactor

@@ -7,13 +7,10 @@ from fastapi import APIRouter, Depends, Query
 from sentinelflow.api.auth import Auth
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.api.schemas.audit import AuditEventOut, AuditPage, VerifyOut
-from sentinelflow.contracts.audit_store import AuditStore
-from sentinelflow.domain.audit import AuditEvent
 from sentinelflow.domain.principals import Principal
 from sentinelflow.security.audit_chain import verify_chain
+from sentinelflow.security.audit_reader import PAGE, read_all
 from sentinelflow.security.permissions import Permission
-
-PAGE = 500
 
 
 def build_audit_router(container: ApiContainer, auth: Auth) -> APIRouter:
@@ -40,11 +37,3 @@ def build_audit_router(container: ApiContainer, auth: Auth) -> APIRouter:
         return VerifyOut(ok=result.ok, first_bad_seq=result.first_bad_seq, checked=len(events))
 
     return router
-
-
-def read_all(store: AuditStore, tenant_id: str) -> list[AuditEvent]:
-    """Read a tenant's entire chain page by page."""
-    events: list[AuditEvent] = []
-    while page := store.read(tenant_id, events[-1].seq if events else 0, PAGE):
-        events.extend(page)
-    return events

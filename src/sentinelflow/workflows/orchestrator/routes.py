@@ -21,8 +21,8 @@ def after_triage(deps: LifecycleDeps) -> Route:
 
 
 def after_investigation(state: LifecycleState) -> str:
-    """Wait for approvals if any were requested; otherwise the incident is escalated."""
-    return "await_decisions" if state.get("approval_ids") else END
+    """Wait for approvals if any were requested; otherwise report the escalation."""
+    return "await_decisions" if state.get("approval_ids") else "report"
 
 
 def after_await(deps: LifecycleDeps) -> Route:

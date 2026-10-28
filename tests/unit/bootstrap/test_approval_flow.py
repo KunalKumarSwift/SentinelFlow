@@ -24,7 +24,11 @@ def test_full_approval_flow_contains_the_incident(flow: Flow) -> None:
         f"/v1/incidents/{accepted['incident_id']}", headers=flow.auth(L2)
     ).json()
     run = flow.client.get(f"/v1/runs/{accepted['run_id']}", headers=flow.auth(L2)).json()
-    assert (incident["status"], run["status"]) == ("contained", "completed")
+    assert (incident["status"], run["status"]) == ("closed", "completed")
+    report = flow.client.get(
+        f"/v1/incidents/{accepted['incident_id']}/report", headers=flow.auth(L2)
+    )
+    assert report.status_code == 200 and "disable_user" in report.json()["body"]
 
 
 def test_l2_sees_only_what_it_may_approve_and_l1_none(flow: Flow) -> None:
