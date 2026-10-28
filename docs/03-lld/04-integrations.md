@@ -63,23 +63,31 @@ All provider methods are synchronous in Phase 1 for simplicity; Phase 3 introduc
 
 ## 2. LLM providers
 
-| Provider | Package | When |
+| Provider | Selected by | When |
 |---|---|---|
-| `FakeLLM` | none | All unit/graph tests. Returns scripted responses keyed by prompt name; records prompts for assertions |
-| `OllamaLLM` | `langchain-ollama` (`ChatOllama`) | Default for local dev. Free, offline |
-| `AnthropicLLM` | `langchain-anthropic` (`ChatAnthropic`) | Low-cost hosted: `claude-haiku-5-5` |
+| `FakeLLM` (`tests/fakes`) | tests only | Scripted answers keyed by `Prompt.name`; records prompts; schema mismatch → `ProviderError` |
+| `DisabledLLM` | `LLM_BACKEND=none` (default) | Always raises a permanent `ProviderError`, so triage routes every incident to human review — fully offline, never pretends to classify |
+| `OllamaLLM` | `LLM_BACKEND=ollama` | Free, local. Default model `qwen2.5:7b` |
+| `AnthropicLLM` | `LLM_BACKEND=anthropic` | Low-cost hosted: `claude-haiku-5-5`, `max_tokens=1024`, 60 s timeout, no `temperature` |
 
-Both real providers wrap LangChain's `with_structured_output(schema)` and translate
-library errors into `ProviderError`. Every call reports token usage to the budget
-tracker (LLD 07 §6).
+Shared plumbing in `providers/llm/`:
+
+- `_render.py` turns a `Prompt` into `[system, human]` messages; each untrusted value sits in a
+  named `<untrusted_data>` block and any `</untrusted_data>` inside it is escaped, so attacker
+  text cannot close its block early.
+- `_invoke.py::invoke_structured` calls `with_structured_output(schema, method="json_schema")`,
+  translates **every** library exception into `ProviderError` (message = prompt name + exception
+  class only; no hosts or keys) and rejects output that is not a `schema` instance.
+- Retry classification: Ollama — transport errors, 429 and 5xx retryable; Anthropic —
+  `RateLimitError`, `APIConnectionError`, 5xx retryable; everything else permanent.
 
 ```python
 @dataclass(frozen=True, slots=True)
 class Prompt:
     name: str                       # "triage.classify" — used for tracing and FakeLLM lookup
     system: str
-    untrusted: Mapping[str, str]    # rendered inside <untrusted_*> delimiters
     instructions: str
+    untrusted: Mapping[str, str]    # rendered inside <untrusted_data> blocks
 ```
 
 ## 3. Mock providers (Phase 1)
@@ -101,14 +109,14 @@ Facades contain switch logic only:
 
 ```python
 def make_llm(settings: Settings) -> LLMProvider:
-    """Return the configured LLM provider."""
+    """Return the configured LLM provider (imports only the selected backend)."""
     match settings.llm_backend:
-        case "anthropic":
-            return AnthropicLLM(model=settings.llm_model, api_key=settings.anthropic_api_key)
         case "ollama":
-            return OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
-        case _:
-            return FakeLLM.from_fixtures(settings.fake_llm_fixtures)
+            return OllamaLLM(settings.llm_model or "qwen2.5:7b", settings.ollama_url)
+        case "anthropic":
+            return AnthropicLLM(settings.llm_model or "claude-haiku-5-5", key)
+        case _:  # "none"
+            return DisabledLLM()
 ```
 
 `core/config.py` (pydantic-settings, read once at start-up):
@@ -117,8 +125,8 @@ def make_llm(settings: Settings) -> LLMProvider:
 |---|---|---|
 | `APP_ENV` | `dev` | `dev` enables the dev-token endpoint |
 | `JWT_SECRET` | — (required) | HS256 signing secret (Phases 1–3) |
-| `LLM_BACKEND` | `fake` | `fake` / `ollama` / `anthropic` |
-| `LLM_MODEL` | `qwen2.5:7b` | Model name for the selected backend |
+| `LLM_BACKEND` | `none` | `none` / `ollama` / `anthropic` |
+| `LLM_MODEL` | per backend | `qwen2.5:7b` (ollama), `claude-haiku-5-5` (anthropic) |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama endpoint |
 | `ANTHROPIC_API_KEY` | — | Only for `anthropic` backend |
 | `STORAGE_BACKEND` | `memory` | `memory` / `postgres` |

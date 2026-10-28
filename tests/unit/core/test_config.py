@@ -20,7 +20,7 @@ def test_defaults_run_fully_offline(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = load_settings()
     assert (settings.app_env, settings.llm_backend, settings.storage_backend) == (
         "dev",
-        "fake",
+        "none",
         "memory",
     )
 
