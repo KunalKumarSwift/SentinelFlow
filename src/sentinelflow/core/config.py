@@ -19,7 +19,8 @@ Environment:
     OTLP_ENDPOINT (e.g. "http://jaeger:4318"; unset = tracing off),
     AUTH_MODE (default: "hs256"; "oidc" = Keycloak), OIDC_ISSUER, OIDC_AUDIENCE
     (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint),
-    POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL.
+    POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL,
+    ACCESS_REVIEW_TENANTS (default: "acme"; comma-separated).
 """
 
 from typing import Literal, Self
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
     oidc_jwks_url: str | None = None
     policy_engine: Literal["incode", "opa"] = "incode"
     opa_url: str = "http://localhost:8181"
+    access_review_tenants: str = "acme"
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:
