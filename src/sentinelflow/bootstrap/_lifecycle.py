@@ -9,6 +9,7 @@ from sentinelflow.contracts.llm import LLMProvider
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.intel_facade import make_threat_intel
+from sentinelflow.facades.notify_facade import make_notifier
 from sentinelflow.providers.events.memory_event_store import MemoryEventStore
 from sentinelflow.providers.identity.mock_identity import MockIdentity
 from sentinelflow.security.audit_recorder import AuditRecorder
@@ -64,5 +65,6 @@ def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
         ticketing=stores.ticketing,
         redactor=redactor,
         tracer=services.tracer,
+        notifier=make_notifier(services.settings),
     )
     return build_lifecycle_graph(deps, stores.checkpointer)

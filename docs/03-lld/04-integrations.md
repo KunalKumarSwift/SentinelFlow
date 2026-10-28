@@ -102,7 +102,7 @@ produced by the simulator, so a scenario's intel, users and events are consisten
 | `MockIdentity` | In-memory directory served from seed data; unknown users return `None`. `apply()` (Phase 2) flips flags (`disabled`, `mfa_reset`) and is idempotent per key |
 | `MemoryEventStore` | Holds the scenario's raw events; filters by entity and time window |
 | `MemoryTicketing` / `PgTicketing` | Tickets in a dict or the `tickets` table; `TCK-0001` style IDs |
-| `ConsoleNotifier` | Logs the message |
+| `WebhookNotifier` | Posts to a Slack/Discord webhook (built, 4.6); errors never include the URL |
 
 **AbuseIPDB (built, slice 4.6).** `providers/intel/abuseipdb_intel.AbuseIpdbThreatIntel` calls
 the v2 `check` endpoint (free tier, 1 000 checks/day). Internal addresses (the same
@@ -164,6 +164,8 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `TICKETING_BACKEND` | `store` | `store` (memory/Postgres) or `github` (one issue per incident) |
 | `GITHUB_REPO` / `GITHUB_TOKEN` | — | Repository (`owner/name`) and fine-grained token for `github` ticketing |
 | `ACCESS_REVIEW_TENANTS` | `acme` | Comma-separated tenants `sentinelflow-access-review` reviews |
+| `NOTIFY_WEBHOOK_URL` | — | Slack/Discord incoming webhook (a secret); unset = no chat notifications |
+| `NOTIFY_STYLE` | `slack` | `slack` (`text`) or `discord` (`content`) payload |
 
 ## 5. Adding a new provider (checklist)
 

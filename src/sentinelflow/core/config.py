@@ -22,6 +22,7 @@ Environment:
     (default: "sentinelflow-api"), OIDC_JWKS_URL (default: Keycloak's certs endpoint),
     POLICY_ENGINE (default: "incode"; "opa" = Rego in deploy/opa), OPA_URL,
     ACCESS_REVIEW_TENANTS (default: "acme"; comma-separated),
+    NOTIFY_WEBHOOK_URL (unset = no chat notifications), NOTIFY_STYLE ("slack" / "discord"),
     TICKETING_BACKEND ("store" = memory/Postgres; "github" needs GITHUB_REPO, GITHUB_TOKEN).
 """
 
@@ -62,6 +63,8 @@ class Settings(BaseSettings):
     policy_engine: Literal["incode", "opa"] = "incode"
     opa_url: str = "http://localhost:8181"
     access_review_tenants: str = "acme"
+    notify_webhook_url: SecretStr | None = None
+    notify_style: Literal["slack", "discord"] = "slack"
     ticketing_backend: Literal["store", "github"] = "store"
     github_repo: str | None = None
     github_token: SecretStr | None = None

@@ -20,6 +20,7 @@ from sentinelflow.workflows.orchestrator._context import (
     save,
 )
 from sentinelflow.workflows.orchestrator.deps import LifecycleDeps
+from sentinelflow.workflows.orchestrator.notify import notify_approvers
 from sentinelflow.workflows.orchestrator.state import LifecycleState, LifecycleUpdate, Step
 
 
@@ -37,7 +38,9 @@ def make_investigate_step(deps: LifecycleDeps) -> Step:
             "approvals": ",".join(approval_ids),
             "dropped": ",".join(result.dropped),
         }
-        save(deps, transition(incident, event), "incident.investigated", details)
+        investigated = transition(incident, event)
+        save(deps, investigated, "incident.investigated", details)
+        notify_approvers(deps, investigated, approval_ids)
         return {"approval_ids": approval_ids}
 
     return investigate
