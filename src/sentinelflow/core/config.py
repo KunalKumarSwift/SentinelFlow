@@ -2,12 +2,12 @@
 
 This is the only module allowed to read the environment. The composition root calls
 ``load_settings()`` and passes the result down; nothing else imports ``os.environ``.
-Defaults run the whole system offline (fake LLM, in-memory storage and queue).
+Defaults run the whole system offline (no LLM, in-memory storage and queue).
 Use ``uv run --env-file .env ...`` to load a local env file.
 
 Environment:
     APP_ENV (default: "dev"), JWT_SECRET (required, >= 32 chars),
-    LLM_BACKEND (default: "fake"), LLM_MODEL (default: "qwen2.5:7b"),
+    LLM_BACKEND (default: "none"), LLM_MODEL (default per backend: qwen2.5:7b / claude-haiku-5-5),
     OLLAMA_URL (default: "http://localhost:11434"), ANTHROPIC_API_KEY,
     STORAGE_BACKEND (default: "memory"), DATABASE_URL,
     QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
@@ -27,8 +27,8 @@ class Settings(BaseSettings):
 
     app_env: Literal["dev", "test", "prod"] = "dev"
     jwt_secret: SecretStr = Field(min_length=32)
-    llm_backend: Literal["fake", "ollama", "anthropic"] = "fake"
-    llm_model: str = "qwen2.5:7b"
+    llm_backend: Literal["none", "ollama", "anthropic"] = "none"
+    llm_model: str | None = None
     ollama_url: str = "http://localhost:11434"
     anthropic_api_key: SecretStr | None = None
     storage_backend: Literal["memory", "postgres"] = "memory"

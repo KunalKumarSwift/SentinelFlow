@@ -31,7 +31,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.12 ✅ | `MemoryRunQueue` + worker loop | StartRun runs graph; failure not acked |
 | 1.13a ✅ | API app: bearer auth, permission dependency, problem+json errors, health, dev-token | 401/403 paths; error mapping; dev-token hidden outside dev |
 | 1.13b ✅ | API routes: alerts, incidents, workflows/runs (start) | 401/403/404/409 paths; tenant isolation; happy path |
-| 1.14 | `OllamaLLM` + `AnthropicLLM` providers + facade | Facade selects by config; error translation (no network in unit tests) |
+| 1.14 ✅ | `OllamaLLM` + `AnthropicLLM` providers + facade | Facade selects by config; error translation (no network in unit tests) |
 
 **Demo:** `sentinelflow-sim run brute_force` → incident triaged HIGH in Swagger.
 
