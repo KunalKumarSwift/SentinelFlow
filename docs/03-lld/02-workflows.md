@@ -153,6 +153,15 @@ validate → fingerprint → dedup → attach to open incident or create new →
 
 It runs in the API request; only the expensive work goes to the queue.
 
+`workflows/ingestion/service.py::IngestionService.ingest(alert) -> IngestResult` rules:
+
+- Unknown `rule_id` → `UnknownRuleError` **before** anything is stored (API returns 422).
+- Same fingerprint within the dedup window **and** the earlier incident is not `CLOSED`
+  → alert joins that incident (`deduplicated=True`).
+- Otherwise a new `NEW` incident is opened with the rule's base severity (triage refines it)
+  and `IngestionDeps.default_team` as owner (team routing comes later).
+- A recurrence after an incident was closed always opens a fresh incident.
+
 ## 10. Testing a graph
 
 1. **Node tests:** call the node function directly with a state dict and fakes.
