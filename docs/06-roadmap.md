@@ -73,7 +73,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 3.7 ✅ | Locust load test + [`docs/benchmarks.md`](benchmarks.md) | — (measurement; found and fixed a start-up schema race) |
 | 3.8 ✅ | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
 
-## Phase 4 — Production-grade identity and deployment ✅ (open: 4.6 extra providers, demo video)
+## Phase 4 — Production-grade identity and deployment ✅ (open: VirusTotal, GitHub Issues, demo video)
 
 | Slice | Deliverable |
 |---|---|
@@ -82,7 +82,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 4.3 ✅ | PostgreSQL row-level security per tenant |
 | 4.4 ✅ | Access-review scheduled workflow |
 | 4.5 ✅ | Helm chart, HPA for API, KEDA for workers |
-| 4.6 (part) ✅ | Optional real providers: **AbuseIPDB done**; VirusTotal, GitHub Issues, Slack/Discord webhook open |
+| 4.6 (part) ✅ | Optional real providers: **AbuseIPDB and Slack/Discord webhook done**; VirusTotal, GitHub Issues open |
 | 4.7 ✅ | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
 | 4.8 (part) ✅ | Architecture diagram + highlights in the README ✅; demo video open |
 

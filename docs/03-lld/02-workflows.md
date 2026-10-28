@@ -71,7 +71,7 @@ START → triage ─┬─ (closed: false positive) → END
 | Step | Does |
 |---|---|
 | `triage` | `run_triage` → `apply_triage` → save + `incident.triaged` |
-| `investigate` | `run_investigation`; each proposed action goes through the tool guard (`action:propose` for the run's initiator) and becomes an `Approval`; incident → `AWAITING_APPROVAL` or `ESCALATED` |
+| `investigate` | `run_investigation`; each proposed action goes through the tool guard (`action:propose` for the run's initiator) and becomes an `Approval`; incident → `AWAITING_APPROVAL` or `ESCALATED`; approvers get one chat message on the `approvals` channel (`domain/notification.py`: incident, severity, actions and roles, **never targets**). A delivery failure is audited as `notification.failed` and never stops the run |
 | `await_decisions` | Re-reads approvals (expiring overdue ones); if any pending → `interrupt()` |
 | `contain` | Executes each approved action via the tool guard (`action:execute`, quorum met) and `IdentityProvider.apply(action, idempotency_key)`; incident → `CONTAINED`, or `ESCALATED` if nothing was approved |
 | `report` | Writes the post-incident report as a ticket; `CONTAINED` → `CLOSED` (escalated incidents stay open for an analyst) |

@@ -8,6 +8,7 @@ from sentinelflow.contracts.approvals import ApprovalRepository
 from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.identity import IdentityProvider
 from sentinelflow.contracts.llm import LLMProvider
+from sentinelflow.contracts.notifier import Notifier
 from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository
 from sentinelflow.contracts.runs import RunRepository
 from sentinelflow.contracts.ticketing import TicketingProvider
@@ -28,6 +29,7 @@ class LifecycleDeps:
     Attributes:
         containment_scope: ``max_scope`` of the registered containment workflow.
         tracer: OpenTelemetry tracer for step spans; no-op unless tracing is configured.
+        notifier: Where "approvals waiting" messages go; ``None`` sends nothing.
     """
 
     incidents: IncidentRepository
@@ -47,3 +49,4 @@ class LifecycleDeps:
     ticketing: TicketingProvider
     redactor: Redactor
     tracer: Tracer = field(default_factory=NoOpTracer)
+    notifier: Notifier | None = None
