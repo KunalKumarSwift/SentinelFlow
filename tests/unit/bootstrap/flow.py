@@ -23,9 +23,9 @@ def who(subject: str, *roles: str, tenant: str = "acme") -> Mapping[str, object]
 class Flow:
     """Drives the API and the worker together."""
 
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings = SETTINGS) -> None:
         """Wire a fresh runtime."""
-        self.runtime: Runtime = build_runtime(SETTINGS, demo_seed=42)
+        self.runtime: Runtime = build_runtime(settings, demo_seed=42)
         self.client = TestClient(create_app(self.runtime.container))
         self.alert = SCENARIOS["brute_force"](make_context(42)).alerts[0]
 

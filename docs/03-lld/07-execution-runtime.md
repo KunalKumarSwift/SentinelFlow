@@ -70,6 +70,12 @@ invalid) is deterministic → dead-lettered immediately.
   `visibility_timeout` (default 60 s) with `XAUTOCLAIM`.
 - Phase 1 `MemoryRunQueue` implements the same protocol with a deque, so the worker
   logic is fully unit-testable without Redis.
+- **Checkpointer by storage backend** (`bootstrap/_stores.py`, `_pg_stores.py`):
+  `STORAGE_BACKEND=memory` uses `InMemorySaver`; `postgres` uses LangGraph's
+  `PostgresSaver` on its own autocommit pool (`providers/storage/postgres/checkpointer.py`,
+  tables created by `setup()` at start-up). Because state holds ids only (ADR 0007), a
+  run paused in one process resumes in another: `tests/unit/bootstrap/test_postgres_runtime.py`
+  pauses a run, discards the runtime and finishes the run from a fresh one.
 
 ## 4. Retries
 

@@ -1,7 +1,5 @@
 """Build the lifecycle graph (triage, investigation, approvals, containment) for one process."""
 
-from langgraph.checkpoint.memory import InMemorySaver
-
 from sentinelflow.bootstrap._stores import Stores
 from sentinelflow.contracts.llm import LLMProvider
 from sentinelflow.core.ids import UuidIdFactory
@@ -49,4 +47,4 @@ def build_lifecycle(
         ticketing=stores.ticketing,
         redactor=redactor,
     )
-    return build_lifecycle_graph(deps, InMemorySaver())
+    return build_lifecycle_graph(deps, stores.checkpointer)

@@ -7,7 +7,7 @@ workflows, proposes containment actions, and executes those actions **only** aft
 policy engine and (when required) a human approver allow it. Every decision is written
 to a tamper-evident audit log.
 
-> Status: **Phase 1 complete**: alerts are ingested, deduplicated and triaged by a LangGraph workflow behind an RBAC-protected API. Next: Phase 2 (policy engine, human-approved containment, audit chain). See the [roadmap](docs/06-roadmap.md).
+> Status: **Phase 2 complete**: alerts are triaged and investigated by LangGraph workflows; containment runs only after policy-checked human approval (two-person rule for critical incidents); every step is in a hash-chained audit log; reports are built from verified facts; state can live in PostgreSQL. Next: Phase 3 (Redis queue, observability, load tests). See the [roadmap](docs/06-roadmap.md).
 
 ## Why this project exists
 
@@ -63,6 +63,14 @@ is closed or triaged **low**. Then, as approvers:
 2. Token for `soc-analyst-l2` → approve `block_ip` (an L2 cannot approve the high-impact one).
 3. The worker resumes the paused LangGraph run and the incident becomes **contained**;
    `GET /v1/audit/verify` (as `auditor`) proves the whole trail is untampered.
+
+To keep incidents, approvals, the audit chain and paused runs across restarts, use
+PostgreSQL (tables are created at start-up):
+
+```bash
+STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/sentinelflow \
+APP_ENV=dev JWT_SECRET=change-me-to-32-or-more-characters uv run sentinelflow-api
+```
 
 Choose an LLM for real verdicts:
 
