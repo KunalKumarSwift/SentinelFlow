@@ -1,49 +1,38 @@
 # LLD 00 — Code Structure
 
-## 1. Repository layout
+## 1. Repository layout (as built)
 
 ```
 WorkflowOrchestration/
-├── pyproject.toml            # one installable package: sentinelflow
-├── .importlinter             # enforces the layer rules below
-├── docker-compose.yml        # Phase 2+
-├── docs/
+├── pyproject.toml  uv.lock   # one installable package: sentinelflow (+ dev / ui groups)
+├── .importlinter             # layer contract + "UI is a pure HTTP client" contract
+├── Dockerfile  docker-compose.yml
+├── deploy/                   # helm chart, keycloak realm, opa policy, prometheus, grafana, postgres init
+├── scripts/                  # check_file_size, gen_opa_data, smoke_test, load/ (locust, run_stats)
+├── docs/                     # requirements, HLD, LLD 00-08, guidelines, testing, roadmap, benchmarks, ADRs
 ├── src/sentinelflow/
-│   ├── core/                 # generic utilities, zero domain knowledge
-│   │   ├── config.py         # the ONLY module that reads environment variables
-│   │   ├── logging.py
-│   │   ├── clock.py          # Clock protocol + SystemClock (time is injected)
-│   │   └── ids.py            # id generation (injectable)
-│   ├── domain/               # frozen dataclasses + pure rules, no I/O
-│   │   ├── alerts.py  incidents.py  severity.py  actions.py
-│   │   ├── approvals.py  principals.py  audit.py  errors.py
-│   ├── contracts/            # typing.Protocol interfaces only
-│   │   ├── llm.py  threat_intel.py  identity.py  event_store.py
-│   │   ├── ticketing.py  notifier.py  repositories.py  run_queue.py
-│   │   └── audit_store.py  policy.py
-│   ├── security/             # authN/authZ building blocks
-│   │   ├── tokens.py  permissions.py  roles.py  rbac.py  abac_rules.py
-│   │   ├── policy_engine.py  tool_guard.py  redaction.py
-│   │   └── injection.py  audit_chain.py
-│   ├── providers/            # one concrete implementation per file
-│   │   ├── llm/        fake_llm.py  ollama_llm.py  anthropic_llm.py
-│   │   ├── intel/      mock_intel.py
-│   │   ├── identity/   mock_identity.py
-│   │   ├── events/     memory_event_store.py
-│   │   ├── storage/    memory_*.py  postgres_*.py
-│   │   └── queue/      memory_queue.py  redis_queue.py
-│   ├── facades/              # config value → provider instance (switch only)
-│   ├── workflows/
-│   │   ├── registry.py
-│   │   ├── ingestion/  triage/  investigation/  containment/  report/  access_review/
-│   │   └── orchestrator/
-│   ├── runtime/              # worker loop, command handling
-│   ├── api/                  # FastAPI routes, schemas, dependencies
-│   ├── simulator/            # synthetic scenario generators, demo seed, CLI (sentinelflow-sim)
-│   └── bootstrap/            # composition root: wiring.py builds everything; serve.py runs it
-└── tests/                    # mirrors src/ one-to-one
-    ├── fakes/                # one Fake per protocol, shared by all tests
-    ├── unit/  integration/  api/  e2e/
+│   ├── core/          clock, ids, config (the ONLY env reader), logging
+│   ├── domain/        frozen dataclasses + pure rules: alerts, incidents, severity, scoring(+table),
+│   │                  dedup, enrichment, triage, investigation, timeline, attack(+table), playbooks,
+│   │                  actions(+table), approvals, runs, audit, report, access_review, principals, errors
+│   ├── contracts/     Protocols: llm, threat_intel, identity, accounts, event_store, repositories,
+│   │                  approvals, runs, run_queue, audit_store, ticketing, metrics, rate_limit, token_budget
+│   ├── security/      permissions, roles, rbac, abac_rules, policy(+engine), opa_engine(+input),
+│   │                  tokens (HS256), oidc/ (RS256/JWKS), verifier, tool_guard, audit_chain/recorder/reader,
+│   │                  injection, redaction, throttle, system_principals
+│   ├── providers/     llm/ (ollama, anthropic, disabled, budgeted), intel/ (mock, abuseipdb),
+│   │                  identity/ (mock, accounts, jwks_http), storage/ (memory + postgres/),
+│   │                  queue/ (memory, redis), ratelimit/, budget/, metrics/, events/, ticketing/
+│   ├── facades/       config → provider switches: llm, intel, policy, auth, tracing, shared_state
+│   ├── workflows/     ingestion, triage, investigation, report, orchestrator (lifecycle graph),
+│   │                  access_review, registry, run_start
+│   ├── runtime/       worker, dispatch, start/resume handlers, access_review_job
+│   ├── api/           FastAPI app, auth, correlation, problems, routes/, schemas/
+│   ├── simulator/     scenarios/ (8), demo seed + accounts, CLI (sentinelflow-sim)
+│   ├── ui/            Streamlit app over the REST API (client, http, models, views)
+│   └── bootstrap/     composition root: wiring, stores, container, lifecycle; serve / worker /
+│                      access-review entry points
+└── tests/             unit/ integration/ api/ contracts/ (memory + Postgres/Redis/OPA) fakes/
 ```
 
 Each workflow folder follows the same shape:

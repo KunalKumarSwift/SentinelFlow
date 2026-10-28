@@ -73,7 +73,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 3.7 ✅ | Locust load test + [`docs/benchmarks.md`](benchmarks.md) | — (measurement; found and fixed a start-up schema race) |
 | 3.8 ✅ | Crash-recovery demo (kill worker mid-run) | Integration test: un-acked run resumed by another worker |
 
-## Phase 4 — Production-grade identity and deployment
+## Phase 4 — Production-grade identity and deployment ✅ (open: 4.6 extra providers, demo video)
 
 | Slice | Deliverable |
 |---|---|
@@ -84,11 +84,12 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 4.5 ✅ | Helm chart, HPA for API, KEDA for workers |
 | 4.6 (part) ✅ | Optional real providers: **AbuseIPDB done**; VirusTotal, GitHub Issues, Slack/Discord webhook open |
 | 4.7 ✅ | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
-| 4.8 | Demo video + architecture diagram for the README |
+| 4.8 (part) ✅ | Architecture diagram + highlights in the README ✅; demo video open |
 
 ## Résumé checkpoints
 
 - After Phase 1: "LangGraph triage pipeline with RBAC-protected FastAPI, TDD, 90 %+ coverage".
 - After Phase 2: add "policy engine (RBAC+ABAC), human-in-the-loop approvals, hash-chained audit log, prompt-injection defences".
-- After Phase 3: add measured throughput/latency numbers and crash-recovery guarantees.
+- After Phase 3: add measured throughput/latency numbers and crash-recovery guarantees
+  (measured: p95 69 ms at ~20 req/s, 18 → 55 runs/s from 1 → 4 workers; see benchmarks).
 - After Phase 4: add "OIDC (Keycloak), OPA, multi-tenant RLS, Kubernetes autoscaling".
