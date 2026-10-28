@@ -1,5 +1,7 @@
 """In-memory incident store for tests and single-process mode."""
 
+from collections.abc import Sequence
+
 from sentinelflow.domain.incidents import Incident
 
 
@@ -35,3 +37,8 @@ class MemoryIncidentRepository:
         if key not in self._items:
             raise KeyError(f"incident {incident.id} does not exist")
         self._items[key] = incident
+
+    def list(self, tenant_id: str) -> Sequence[Incident]:
+        """Return the tenant's incidents ordered by creation time, then id."""
+        own = (i for (tenant, _), i in self._items.items() if tenant == tenant_id)
+        return sorted(own, key=lambda i: (i.created_at, i.id))

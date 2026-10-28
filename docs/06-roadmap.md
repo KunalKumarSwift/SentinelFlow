@@ -30,7 +30,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.11 ✅ | Workflow registry + orchestrator (triage only) | Unknown workflow rejected; permission required |
 | 1.12 ✅ | `MemoryRunQueue` + worker loop | StartRun runs graph; failure not acked |
 | 1.13a ✅ | API app: bearer auth, permission dependency, problem+json errors, health, dev-token | 401/403 paths; error mapping; dev-token hidden outside dev |
-| 1.13b | API routes: alerts, incidents, runs | 401/403/404 paths; happy path |
+| 1.13b ✅ | API routes: alerts, incidents, workflows/runs (start) | 401/403/404/409 paths; tenant isolation; happy path |
 | 1.14 | `OllamaLLM` + `AnthropicLLM` providers + facade | Facade selects by config; error translation (no network in unit tests) |
 
 **Demo:** `sentinelflow-sim run brute_force` → incident triaged HIGH in Swagger.
@@ -47,7 +47,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 2.6 | Redaction + injection detector | PII hidden without permission; injection phrases flagged |
 | 2.7 | Investigation graph (event store, timeline, ATT&CK keyword retrieval) | Techniques only from candidates |
 | 2.8 | Containment graph with `interrupt` | Pauses; resumes; executes only with quorum |
-| 2.9 | Approvals API + resume command | SoD, self-action, distinct approvers, 409 on decided |
+| 2.9 | Approvals API + resume command; run records + `GET /v1/runs/{id}` | SoD, self-action, distinct approvers, 409 on decided |
 | 2.10 | Report graph + ticketing | Report contains facts; ticket created |
 | 2.11 | PostgreSQL repositories + Postgres checkpointer | Contract tests run against memory and Postgres (testcontainers) |
 | 2.12 | Remaining simulator scenarios | Each scenario's `expected` met end-to-end (graph level) |

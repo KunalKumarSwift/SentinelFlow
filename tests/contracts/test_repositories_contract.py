@@ -65,3 +65,10 @@ def test_alert_can_be_fetched_by_id_within_tenant(alerts: AlertRepository) -> No
     stored = alerts.get("acme", "alt-7")
     assert stored is not None and stored.alert.id == "alt-7"
     assert alerts.get("globex", "alt-7") is None
+
+
+def test_list_returns_only_tenant_incidents_oldest_first(incidents: IncidentRepository) -> None:
+    incidents.add(an_incident(id="inc-2", created_at=T0.replace(hour=11)))
+    incidents.add(an_incident(id="inc-1"))
+    incidents.add(an_incident(id="inc-3", tenant_id="globex"))
+    assert [i.id for i in incidents.list("acme")] == ["inc-1", "inc-2"]
