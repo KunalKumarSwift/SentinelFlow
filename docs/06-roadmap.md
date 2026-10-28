@@ -20,7 +20,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 1.1 ✅ | Domain enums + `Alert`, `Entities`, `Incident` | Frozen; equality; invalid severity rejected |
 | 1.2 ✅ | `fingerprint_alert`, `is_duplicate` | Same entities → same fingerprint; outside window → not duplicate |
 | 1.3 ✅ | `score_severity` + table | Table-driven cases per rule and modifier |
-| 1.4 | Incident state machine `next_status` | Every legal transition; illegal raises |
+| 1.4 ✅ | Incident state machine `next_status` | Every legal transition; illegal raises |
 | 1.5 | Simulator core + `brute_force` + `benign` | Same seed → identical output; expected fields set |
 | 1.6 | Protocols + fakes + `MockThreatIntel`, `MockIdentity` | Contract tests for intel and identity |
 | 1.7 | Permissions, roles, RBAC check | Generated RBAC matrix tests |
