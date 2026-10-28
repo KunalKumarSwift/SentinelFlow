@@ -58,3 +58,10 @@ def test_adding_existing_incident_id_is_rejected(incidents: IncidentRepository) 
 def test_updating_unknown_incident_is_rejected(incidents: IncidentRepository) -> None:
     with pytest.raises(KeyError):
         incidents.update(an_incident())
+
+
+def test_alert_can_be_fetched_by_id_within_tenant(alerts: AlertRepository) -> None:
+    alerts.add(StoredAlert(an_alert(id="alt-7"), "fp", "inc-1"))
+    stored = alerts.get("acme", "alt-7")
+    assert stored is not None and stored.alert.id == "alt-7"
+    assert alerts.get("globex", "alt-7") is None

@@ -2,7 +2,10 @@
 
 ## 1. Commands
 
-Messages on the run queue are small, typed, versioned Pydantic models:
+**Phase 1 (built):** `contracts/run_queue.py` defines `StartRun(run_id, tenant_id, workflow,
+incident_id, alert_id, initiator)` and `Delivery(id, command, attempt)` as frozen dataclasses;
+`MemoryRunQueue` redelivers unacked messages after a visibility timeout measured with the
+injected `Clock`. Phase 3 serialises commands for Redis as the versioned Pydantic models below:
 
 ```python
 class StartRun(BaseModel):
@@ -45,13 +48,18 @@ flowchart TD
 
 Code split (each file ≤ 100 lines):
 
-| Module | Responsibility |
-|---|---|
-| `runtime/worker.py` | Loop: claim → dispatch → ack; graceful shutdown on SIGTERM |
-| `runtime/dispatch.py` | Map command type → handler |
-| `runtime/start_handler.py` | Build run context, invoke graph |
-| `runtime/resume_handler.py` | Rebuild decision from DB, resume graph |
-| `runtime/outcome.py` | Translate graph result / exception → run status + ack/DLQ |
+| Module | Responsibility | Phase |
+|---|---|---|
+| `runtime/worker.py` | `Worker.run_once()`: claim a batch → handler → ack / leave for retry / dead-letter | 1 ✅ |
+| `runtime/start_handler.py` | `StartRunHandler`: load incident + alert, `run_lifecycle`, save incident | 1 ✅ |
+| `runtime/dispatch.py` | Map command type → handler | 2 |
+| `runtime/resume_handler.py` | Rebuild decision from DB, resume graph | 2 |
+| `runtime/outcome.py` | Run status bookkeeping; graceful shutdown on SIGTERM | 3 |
+
+Failure classification (`worker.py`): `ProviderError(retryable=True)` or an unexpected
+exception → left unacked for redelivery until `max_attempts` (default 5), then dead-lettered
+with `"gave up after N attempts: …"`; any other `SentinelFlowError` (not found, denied,
+invalid) is deterministic → dead-lettered immediately.
 
 ## 3. Delivery semantics
 
