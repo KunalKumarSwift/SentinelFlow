@@ -194,8 +194,10 @@ Untrusted data = any alert/event field. Controls:
 
 1. **Delimit and label** untrusted data in prompts: `<untrusted_alert_data>…</untrusted_alert_data>`
    plus a system instruction that it is data, not instructions.
-2. **Detect** with simple, testable heuristics (phrases like "ignore previous", "you are now",
-   role tags, base64 blobs with instructions) → `injection_suspected = True`, audited.
+2. **Detect** with named, testable regex heuristics (`override_instructions`,
+   `role_reassignment`, `chat_markup`, `delimiter_escape`, `verdict_steering`,
+   `prompt_exfiltration`) → `TriageResult.injection_indicators`, recorded on the incident's
+   audit trail. Escaped `</untrusted_data>` closers in prompts (LLD 04) back this up.
 3. **Constrain output** — structured output only; enums for verdict/action kinds.
 4. **Fail safe** — suspicion or invalid output → `NEEDS_REVIEW`, never auto-close, never auto-act.
 5. **No authority** — even a perfect injection can only change a *suggestion*; execution

@@ -70,8 +70,9 @@ of state, tested with a table of inputs → expected next node.
 
 ```mermaid
 flowchart LR
-    S((start)) --> IP[lookup_ip]
-    S --> USR[lookup_user]
+    S((start)) --> SCAN[scan_for_injection]
+    SCAN --> IP[lookup_ip]
+    SCAN --> USR[lookup_user]
     IP & USR --> SCORE[score]
     SCORE --> CLS[classify]
     CLS --> DEC[decide]
@@ -80,16 +81,17 @@ flowchart LR
 
 | Node | Kind | Reads (`state.py`) | Does |
 |---|---|---|---|
+| `scan_for_injection` | pure | `TriageInput` | `security.injection.detect_injection` over alert title + raw values → `injection_indicators` |
 | `lookup_ip` / `lookup_user` | provider | `TriageInput` | Run in parallel; skip the provider when the entity is absent |
 | `score` | pure | `ScoreInput` | `domain.scoring.score_severity` — the LLM never influences severity |
 | `classify` | LLM | `ClassifyInput` | Structured output `TriageClassification(verdict, rationale)`; alert text goes only into `Prompt.untrusted`. `ProviderError` or malformed output → `classification=None` |
-| `decide` | pure | `DecideInput` | Fail safe: no classification → `NEEDS_REVIEW`; LLM `FALSE_POSITIVE` on severity ≥ HIGH → `NEEDS_REVIEW`; otherwise the LLM verdict |
+| `decide` | pure | `DecideInput` | Fail safe: any injection indicator → `NEEDS_REVIEW` (indicators kept on `TriageResult`); no classification → `NEEDS_REVIEW`; LLM `FALSE_POSITIVE` on severity ≥ HIGH → `NEEDS_REVIEW`; otherwise the LLM verdict |
 
 Each node declares the narrow `TypedDict` it reads (all keys required) and returns a partial
 `TriageUpdate`; LangGraph passes each node exactly those keys. `run_triage(graph, incident,
 alert) -> TriageResult` is the typed entry point.
 
-Phase 2 adds `scan_for_injection` before enrichment (slice 2.6) and an asset lookup.
+An asset lookup joins the parallel enrichment later.
 
 ## 5. Investigation
 

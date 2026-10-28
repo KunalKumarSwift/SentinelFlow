@@ -19,6 +19,7 @@ from sentinelflow.workflows.triage.deps import TriageDeps
 from sentinelflow.workflows.triage.nodes.classify import make_classify
 from sentinelflow.workflows.triage.nodes.decide import decide
 from sentinelflow.workflows.triage.nodes.enrich import make_lookup_ip, make_lookup_user
+from sentinelflow.workflows.triage.nodes.scan import scan_for_injection
 from sentinelflow.workflows.triage.nodes.score import score
 from sentinelflow.workflows.triage.state import TriageInput, TriageState
 
@@ -28,13 +29,15 @@ TriageGraph = CompiledStateGraph[TriageState, None, TriageInput, TriageState]
 def build_triage_graph(deps: TriageDeps) -> TriageGraph:
     """Return the compiled triage graph using ``deps`` for all external calls."""
     graph = StateGraph(TriageState, input_schema=TriageInput)
+    graph.add_node("scan", scan_for_injection)
     graph.add_node("lookup_ip", make_lookup_ip(deps))
     graph.add_node("lookup_user", make_lookup_user(deps))
     graph.add_node("score", score)
     graph.add_node("classify", make_classify(deps))
     graph.add_node("decide", decide)
-    graph.add_edge(START, "lookup_ip")
-    graph.add_edge(START, "lookup_user")
+    graph.add_edge(START, "scan")
+    graph.add_edge("scan", "lookup_ip")
+    graph.add_edge("scan", "lookup_user")
     graph.add_edge(["lookup_ip", "lookup_user"], "score")
     graph.add_edge("score", "classify")
     graph.add_edge("classify", "decide")

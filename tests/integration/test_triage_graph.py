@@ -27,7 +27,10 @@ def _triage(out: ScenarioOutput, llm_answer: dict[str, str]) -> tuple[Severity, 
     return result.severity, result.verdict
 
 
-@pytest.mark.parametrize(("name", "llm_answer"), [("brute_force", TP), ("benign_travel", FP)])
+@pytest.mark.parametrize(
+    ("name", "llm_answer"),
+    [("brute_force", TP), ("benign_travel", FP), ("prompt_injection", FP)],
+)
 def test_scenario_reaches_expected_outcome(name: str, llm_answer: dict[str, str]) -> None:
     out = SCENARIOS[name](make_context())
     assert _triage(out, llm_answer) == (out.expected.severity, out.expected.verdict)
