@@ -40,11 +40,13 @@ class DecideInput(TypedDict):
 
     severity: Severity
     classification: TriageClassification | None
+    injection_indicators: tuple[str, ...]
 
 
 class TriageUpdate(TypedDict, total=False):
     """Partial state a node returns."""
 
+    injection_indicators: tuple[str, ...]
     ip_reputation: IpReputation | None
     user: UserContext | None
     severity: Severity

@@ -12,11 +12,17 @@ from sentinelflow.workflows.triage.state import DecideInput
 V = Verdict
 
 
-def _decide(severity: Severity, verdict: V | None) -> TriageResult:
+def _decide(
+    severity: Severity, verdict: V | None, indicators: tuple[str, ...] = ()
+) -> TriageResult:
     classification = (
         None if verdict is None else TriageClassification(verdict=verdict, rationale="r")
     )
-    state: DecideInput = {"severity": severity, "classification": classification}
+    state: DecideInput = {
+        "severity": severity,
+        "classification": classification,
+        "injection_indicators": indicators,
+    }
     result = decide(state).get("result")
     assert result is not None
     return result
@@ -41,3 +47,10 @@ def test_decide(severity: Severity, llm_verdict: V | None, expected: V) -> None:
 def test_missing_classification_explains_why() -> None:
     result = _decide(Severity.MEDIUM, None)
     assert "unavailable" in result.rationale
+
+
+def test_suspected_injection_forces_review_whatever_the_llm_says() -> None:
+    result = _decide(Severity.LOW, V.FALSE_POSITIVE, ("verdict_steering",))
+    assert result.verdict is V.NEEDS_REVIEW
+    assert result.injection_indicators == ("verdict_steering",)
+    assert "verdict_steering" in result.rationale

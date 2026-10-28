@@ -14,6 +14,7 @@ class TriageResult:
     severity: Severity
     verdict: Verdict
     rationale: str
+    injection_indicators: tuple[str, ...] = ()
 
 
 def apply_triage(incident: Incident, result: TriageResult) -> Incident:
