@@ -12,13 +12,15 @@ class WorkflowDefinition:
 
     name: str                           # "triage"
     version: str                        # "1.0.0"
-    required_permission: str            # needed to start it: "workflow:run:triage"
-    max_scope: frozenset[str]           # most it may ever do: {"intel:lookup", ...}
-    build: Callable[[Deps], CompiledGraph]
+    required_permission: Permission     # needed to start it: workflow:run:triage
+    max_scope: frozenset[Permission]    # most it may ever do: {intel:lookup, identity:read}
 ```
 
-The registry is an immutable mapping built in `bootstrap.py`. Starting an unknown or
-unauthorised workflow fails before anything is enqueued.
+`WorkflowRegistry` (`workflows/registry.py`) offers `list()`, `get(name)` and
+`authorize_start(principal, name)`, which raises `UnknownWorkflowError` (→ 404) or
+`PolicyDeniedError("missing permission …")` (→ 403) **before** anything is enqueued.
+`DEFAULT_REGISTRY` holds Phase 1's single entry, `triage`. Definitions carry metadata only;
+the runtime maps a name to its compiled graph.
 
 ## 2. Shared conventions
 
@@ -57,6 +59,12 @@ class LifecycleState(TypedDict):
 
 Routing functions (`route_after_triage`, `route_after_investigation`) are pure functions
 of state, tested with a table of inputs → expected next node.
+
+**Phase 1 implementation** (`workflows/orchestrator/`): `START → triage → apply_triage → END`.
+`TriageStep` runs the compiled triage graph; `apply_triage_result` calls
+`domain.triage.apply_triage`, which sets severity and verdict and moves the incident to
+`TRIAGED` (or `CLOSED` for a false positive) through the lifecycle state machine.
+`run_lifecycle(graph, incident, alert) -> Incident` is the typed entry point.
 
 ## 4. Triage
 
