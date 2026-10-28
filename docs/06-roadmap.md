@@ -43,7 +43,8 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 2.1 ✅ | Action catalogue + `approval_requirement` | Table-driven by kind × severity |
 | 2.2 ✅ | ABAC rules (`security/abac_rules.py`, one small function each) | Allow + deny case per rule |
 | 2.3 ✅ | Policy engine (deny-overrides) | Order: tenant → RBAC → ABAC; reason strings |
-| 2.4 | Audit chain + `AuditStore` (memory) | Hypothesis tamper tests |
+| 2.4a ✅ | Audit chain + `AuditStore` (memory) | Hypothesis tamper tests |
+| 2.4b | Audit API (`/v1/audit`, `/v1/audit/verify`) + recording API events | auditor-only; tamper → `ok=false` |
 | 2.5 | Tool guard | Scope ∩ initiator ∩ orchestrator; every call audited |
 | 2.6 | Redaction + injection detector | PII hidden without permission; injection phrases flagged |
 | 2.7 | Investigation graph (event store, timeline, ATT&CK keyword retrieval) | Techniques only from candidates |

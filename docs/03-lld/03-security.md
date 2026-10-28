@@ -160,7 +160,11 @@ hash_0 = SHA256("sentinelflow-genesis:" + tenant_id)
 
 - One chain per tenant; `seq` is a gap-free counter per tenant.
 - Canonical JSON = sorted keys, UTF-8, no whitespace, ISO-8601 UTC timestamps.
-- `verify_chain(events) -> VerifyResult(ok, first_bad_seq)` is pure and property-tested.
+- `chain_next(previous, draft) -> AuditEvent` and `verify_chain(tenant_id, events) ->
+  VerifyResult(ok, first_bad_seq)` are pure and property-tested (Hypothesis): any edit is
+  reported at its own `seq`, a deleted event at the first `seq` after the gap.
+- `MemoryAuditStore` serialises appends with a lock so `seq` stays gap-free when API and
+  worker threads write concurrently.
 - Storage is append-only: the DB role used by the app has `INSERT, SELECT` only on `audit_events`.
 - Audited verbs: `alert.ingested`, `run.started|interrupted|resumed|completed|failed`,
   `policy.allowed|denied`, `tool.*`, `approval.requested|decided`, `injection.suspected`,
