@@ -1,37 +1,105 @@
-"""Incident lifecycle orchestrator (Phase 1: triage only) on simulator scenarios."""
+"""Full incident lifecycle: triage → investigation → human approval → containment."""
 
-import pytest
+from datetime import timedelta
 
+from sentinelflow.domain.actions import ActionKind
+from sentinelflow.domain.approvals import ApprovalStatus
 from sentinelflow.domain.incidents import IncidentStatus
-from sentinelflow.providers.identity.mock_identity import MockIdentity
-from sentinelflow.providers.intel.mock_intel import MockThreatIntel
-from sentinelflow.simulator.registry import SCENARIOS
-from sentinelflow.workflows.orchestrator import build_lifecycle_graph, run_lifecycle
-from sentinelflow.workflows.triage import TriageDeps, build_triage_graph
-from tests.builders import an_incident
-from tests.fakes.fake_llm import FakeLLM
-from tests.unit.simulator.conftest import make_context
-from tests.unit.workflows.triage.helpers import FP, TP
+from sentinelflow.workflows.orchestrator import run_lifecycle
+from tests.integration.lifecycle_harness import Harness
+from tests.unit.security.policy_helpers import who
 
 
-@pytest.mark.parametrize(
-    ("name", "answer", "status"),
-    [("brute_force", TP, IncidentStatus.TRIAGED), ("benign_travel", FP, IncidentStatus.CLOSED)],
-)
-def test_lifecycle_applies_triage_to_incident(
-    name: str, answer: dict[str, str], status: IncidentStatus
-) -> None:
-    out = SCENARIOS[name](make_context())
-    deps = TriageDeps(
-        intel=MockThreatIntel(out.seed_data.ip_reputations),
-        identity=MockIdentity(out.seed_data.users),
-        llm=FakeLLM({"triage.classify": answer}),
-    )
-    alert = out.alerts[0]
-    graph = build_lifecycle_graph(build_triage_graph(deps))
-    incident = run_lifecycle(graph, an_incident(entities=alert.entities), alert)
-    assert (incident.status, incident.severity, incident.verdict) == (
-        status,
-        out.expected.severity,
-        out.expected.verdict,
-    )
+def _status(h: Harness) -> IncidentStatus:
+    incident = h.incidents.get("acme", "inc-0001")
+    assert incident is not None
+    return incident.status
+
+
+def test_false_positive_closes_without_approvals() -> None:
+    h = Harness()
+    assert h.start("benign_travel") is False
+    assert _status(h) is IncidentStatus.CLOSED and h.approvals.pending("acme") == []
+
+
+def test_attack_pauses_for_approval_with_catalogue_requirements() -> None:
+    h = Harness()
+    assert h.start("brute_force") is True
+    assert _status(h) is IncidentStatus.AWAITING_APPROVAL
+    pending = {a.action.kind: a.required_role for a in h.approvals.pending("acme")}
+    assert pending == {
+        ActionKind.DISABLE_USER: "incident-commander",
+        ActionKind.BLOCK_IP: "soc-analyst-l2",
+    }
+    assert h.identity is not None and h.identity.applied == []
+
+
+def test_resume_while_pending_keeps_waiting_and_executes_nothing() -> None:
+    h = Harness()
+    h.start("brute_force")
+    first = h.approvals.pending("acme")[0]
+    h.decide(first, "u-cmdr")
+    assert h.resume() is True
+    assert h.identity is not None and h.identity.applied == []
+
+
+def test_all_approved_executes_and_contains() -> None:
+    h = Harness()
+    h.start("brute_force")
+    for approval in h.approvals.pending("acme"):
+        h.decide(approval, "u-cmdr")
+    assert h.resume() is False
+    assert _status(h) is IncidentStatus.CONTAINED
+    assert h.identity is not None
+    assert [a.kind for a in h.identity.applied] == [ActionKind.DISABLE_USER, ActionKind.BLOCK_IP]
+    verbs = [e.verb for e in h.audit.read("acme", 0, 100)]
+    assert verbs.count("tool.allowed") == 4 and "incident.contained" in verbs
+
+
+def test_all_rejected_escalates_without_side_effects() -> None:
+    h = Harness()
+    h.start("brute_force")
+    for approval in h.approvals.pending("acme"):
+        h.decide(approval, "u-cmdr", approved=False)
+    assert h.resume() is False
+    assert _status(h) is IncidentStatus.ESCALATED
+    assert h.identity is not None and h.identity.applied == []
+    statuses = {a.status for a in h.approvals.for_run("acme", "run-1")}
+    assert statuses == {ApprovalStatus.REJECTED}
+
+
+def test_initiator_who_cannot_propose_gets_no_approvals_and_escalates() -> None:
+    h = Harness()
+    assert h.start("brute_force", initiator=who("executive")) is False
+    assert _status(h) is IncidentStatus.ESCALATED
+    denied = [e for e in h.audit.read("acme", 0, 100) if e.verb == "tool.denied"]
+    assert len(denied) == 2
+
+
+def test_duplicate_start_of_finished_run_is_a_no_op() -> None:
+    h = Harness()
+    h.start("benign_travel")
+    run = h.runs.get("acme", "run-1")
+    assert run is not None and h.graph is not None
+    assert run_lifecycle(h.graph, run) is False
+    assert _status(h) is IncidentStatus.CLOSED
+
+
+def test_duplicate_start_while_waiting_stays_waiting_without_retriage() -> None:
+    h = Harness()
+    h.start("brute_force")
+    run = h.runs.get("acme", "run-1")
+    assert run is not None and h.graph is not None
+    assert run_lifecycle(h.graph, run) is True
+    verbs = [e.verb for e in h.audit.read("acme", 0, 100)]
+    assert verbs.count("incident.triaged") == 1
+
+
+def test_undecided_approvals_expire_and_the_incident_escalates() -> None:
+    h = Harness()
+    h.start("brute_force")
+    h.clock.advance(timedelta(hours=4))
+    assert h.resume() is False
+    assert _status(h) is IncidentStatus.ESCALATED
+    statuses = {a.status for a in h.approvals.for_run("acme", "run-1")}
+    assert statuses == {ApprovalStatus.EXPIRED}

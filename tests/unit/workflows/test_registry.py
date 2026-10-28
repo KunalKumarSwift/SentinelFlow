@@ -13,7 +13,7 @@ def _principal(role: str) -> Principal:
 
 
 def test_lists_registered_workflows_by_name() -> None:
-    assert [d.name for d in DEFAULT_REGISTRY.list()] == ["triage"]
+    assert [d.name for d in DEFAULT_REGISTRY.list()] == ["containment", "triage"]
 
 
 def test_triage_scope_is_read_only() -> None:

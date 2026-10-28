@@ -35,5 +35,5 @@ def test_unsupported_backend_fails_at_start_up() -> None:
     settings = Settings(  # type: ignore[call-arg]
         jwt_secret=SecretStr("s" * 32), queue_backend="redis"
     )
-    with pytest.raises(ValueError, match="Phase 1"):
+    with pytest.raises(ValueError, match="single-process mode"):
         build_runtime(settings)

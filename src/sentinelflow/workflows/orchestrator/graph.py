@@ -1,38 +1,84 @@
 # pyright: reportUnknownMemberType=false, reportMissingTypeStubs=false
 # LangGraph's builder/compile/invoke signatures contain partially unknown types under
-# strict mode; this wiring file opts out of that one check. Nodes stay fully strict.
-"""Wire the incident lifecycle: START -> triage -> apply_triage -> END.
+# strict mode; this wiring file opts out of that one check. Steps stay fully strict.
+"""Wire the lifecycle and provide typed start/resume entry points.
 
-Investigation, containment and reporting attach after ``apply_triage`` in Phase 2.
+    START → triage ─┬─ (closed) → END
+                    └─ investigate ─┬─ (no approvals) → END
+                                    └─ await_decisions ⟲ (pending) → contain → END
+
+``thread_id = run_id`` so any worker can resume any run from the checkpointer.
 """
 
-from typing import cast
-
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Command
 
-from sentinelflow.domain.alerts import Alert
-from sentinelflow.domain.incidents import Incident
-from sentinelflow.workflows.orchestrator.nodes import TriageStep, apply_triage_result
-from sentinelflow.workflows.orchestrator.state import LifecycleInput, LifecycleState
-from sentinelflow.workflows.triage.graph import TriageGraph
+from sentinelflow.domain.runs import RunRecord
+from sentinelflow.workflows.orchestrator import routes
+from sentinelflow.workflows.orchestrator.deps import LifecycleDeps
+from sentinelflow.workflows.orchestrator.state import LifecycleState
+from sentinelflow.workflows.orchestrator.steps.await_step import make_await_step
+from sentinelflow.workflows.orchestrator.steps.contain_step import make_contain_step
+from sentinelflow.workflows.orchestrator.steps.investigate_step import make_investigate_step
+from sentinelflow.workflows.orchestrator.steps.triage_step import make_triage_step
 
-LifecycleGraph = CompiledStateGraph[LifecycleState, None, LifecycleInput, LifecycleState]
+LifecycleGraph = CompiledStateGraph[LifecycleState, None, LifecycleState, LifecycleState]
 
 
-def build_lifecycle_graph(triage_graph: TriageGraph) -> LifecycleGraph:
-    """Return the compiled lifecycle graph built around a compiled triage graph."""
-    graph = StateGraph(LifecycleState, input_schema=LifecycleInput)
-    graph.add_node("triage", TriageStep(triage_graph))
-    graph.add_node("apply_triage", apply_triage_result)
+def build_lifecycle_graph(
+    deps: LifecycleDeps, checkpointer: BaseCheckpointSaver[str]
+) -> LifecycleGraph:
+    """Return the compiled lifecycle graph persisting checkpoints in ``checkpointer``."""
+    graph = StateGraph(LifecycleState)
+    graph.add_node("triage", make_triage_step(deps))
+    graph.add_node("investigate", make_investigate_step(deps))
+    graph.add_node("await_decisions", make_await_step(deps))
+    graph.add_node("contain", make_contain_step(deps))
     graph.add_edge(START, "triage")
-    graph.add_edge("triage", "apply_triage")
-    graph.add_edge("apply_triage", END)
-    return graph.compile()
+    graph.add_conditional_edges("triage", routes.after_triage(deps), ["investigate", END])
+    graph.add_conditional_edges("investigate", routes.after_investigation, ["await_decisions", END])
+    graph.add_conditional_edges(
+        "await_decisions", routes.after_await(deps), ["await_decisions", "contain"]
+    )
+    graph.add_edge("contain", END)
+    return graph.compile(checkpointer=checkpointer)
 
 
-def run_lifecycle(graph: LifecycleGraph, incident: Incident, alert: Alert) -> Incident:
-    """Run the lifecycle for one incident and return the updated incident."""
-    final = graph.invoke({"incident": incident, "alert": alert})
-    # invoke() is typed as returning dict[str, Any]; apply_triage always writes incident.
-    return cast(Incident, final["incident"])
+def run_lifecycle(graph: LifecycleGraph, run: RunRecord) -> bool:
+    """Start the lifecycle for ``run``; return True if it paused for approvals.
+
+    Note:
+        Queues deliver at least once. A thread that already exists is continued from its
+        checkpoint (or left alone if finished) instead of being restarted.
+    """
+    config = _config(run.id)
+    snapshot = graph.get_state(config)
+    if snapshot.values:
+        if snapshot.next:
+            graph.invoke(None, config)
+        return _waiting(graph, run.id)
+    start: LifecycleState = {
+        "run_id": run.id,
+        "tenant_id": run.tenant_id,
+        "incident_id": run.incident_id,
+        "alert_id": run.alert_id,
+    }
+    graph.invoke(start, config)
+    return _waiting(graph, run.id)
+
+
+def resume_lifecycle(graph: LifecycleGraph, run_id: str) -> bool:
+    """Wake a paused run so it re-reads approvals; return True if it is still waiting."""
+    graph.invoke(Command(resume=True), _config(run_id))
+    return _waiting(graph, run_id)
+
+
+def _config(run_id: str) -> RunnableConfig:
+    return {"configurable": {"thread_id": run_id}}
+
+
+def _waiting(graph: LifecycleGraph, run_id: str) -> bool:
+    return bool(graph.get_state(_config(run_id)).next)

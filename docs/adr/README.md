@@ -12,3 +12,4 @@ acceptance; a new ADR supersedes an old one.
 | [0004](0004-synthetic-data-first.md) | Synthetic simulator instead of real security tools | Accepted |
 | [0005](0005-single-package-layered.md) | One Python package with enforced layers | Accepted |
 | [0006](0006-llm-proposes-code-executes.md) | LLM proposes, deterministic code executes | Accepted |
+| [0007](0007-id-only-checkpoint-state.md) | Checkpointed lifecycle state holds identifiers only | Accepted |
