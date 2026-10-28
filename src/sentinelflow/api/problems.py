@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from sentinelflow.domain.errors import (
     AuthenticationError,
     AuthorizationError,
+    ConflictError,
     DomainError,
     InvalidTransitionError,
     NotFoundError,
@@ -23,6 +24,7 @@ _STATUS: list[tuple[type[SentinelFlowError], int, str]] = [
     (AuthorizationError, 403, "Forbidden"),
     (NotFoundError, 404, "Not Found"),
     (InvalidTransitionError, 409, "Conflict"),
+    (ConflictError, 409, "Conflict"),
     (DomainError, 422, "Unprocessable Content"),
     (ProviderError, 503, "Service Unavailable"),
 ]
