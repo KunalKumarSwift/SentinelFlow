@@ -83,7 +83,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 | 4.4 ✅ | Access-review scheduled workflow |
 | 4.5 ✅ | Helm chart, HPA for API, KEDA for workers |
 | 4.6 | Optional real providers: AbuseIPDB, VirusTotal, GitHub Issues, Slack/Discord webhook |
-| 4.7 | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
+| 4.7 ✅ | Minimal UI (Streamlit): incidents, approvals inbox, audit view |
 | 4.8 | Demo video + architecture diagram for the README |
 
 ## Résumé checkpoints

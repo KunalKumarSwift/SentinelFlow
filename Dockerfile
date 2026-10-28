@@ -7,10 +7,10 @@ WORKDIR /app
 
 # Dependencies first, so a code change does not invalidate the dependency layer.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --locked --no-dev --no-install-project
+RUN uv sync --locked --no-default-groups --group ui --no-install-project
 
 COPY src ./src
-RUN uv sync --locked --no-dev
+RUN uv sync --locked --no-default-groups --group ui
 
 # Never run as root inside the container.
 RUN useradd --system --uid 10001 sentinel

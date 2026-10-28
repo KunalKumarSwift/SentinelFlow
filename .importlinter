@@ -8,10 +8,27 @@ name = Layered architecture (see docs/03-lld/00-code-structure.md)
 type = layers
 layers =
     (sentinelflow.bootstrap)
-    (sentinelflow.api) | (sentinelflow.runtime) | (sentinelflow.simulator)
+    (sentinelflow.api) | (sentinelflow.runtime) | (sentinelflow.simulator) | (sentinelflow.ui)
     (sentinelflow.facades)
     (sentinelflow.workflows) | (sentinelflow.providers)
     (sentinelflow.security)
     (sentinelflow.contracts)
     (sentinelflow.domain)
     (sentinelflow.core)
+
+# The UI is a pure HTTP client: it may use core helpers but never reach behind the API.
+[importlinter:contract:ui-http-only]
+name = UI talks to SentinelFlow only through the REST API
+type = forbidden
+source_modules =
+    sentinelflow.ui
+forbidden_modules =
+    sentinelflow.api
+    sentinelflow.runtime
+    sentinelflow.workflows
+    sentinelflow.providers
+    sentinelflow.security
+    sentinelflow.facades
+    sentinelflow.bootstrap
+    sentinelflow.domain
+    sentinelflow.contracts
