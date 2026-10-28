@@ -18,6 +18,7 @@ from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores, memory_st
 from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.facades.llm_facade import make_llm
+from sentinelflow.facades.policy_facade import make_policy_engine
 from sentinelflow.facades.shared_state_facade import make_run_queue, make_token_budget
 from sentinelflow.facades.tracing_facade import make_tracer
 from sentinelflow.providers.llm.budgeted_llm import BudgetedLLM
@@ -50,7 +51,8 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     stores = _stores(settings, metrics)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
     tracer = make_tracer(settings)
-    services = Services(_budgeted_llm(settings, stores, metrics), redactor, tracer, demo_seed)
+    llm = _budgeted_llm(settings, stores, metrics)
+    services = Services(llm, redactor, tracer, demo_seed, make_policy_engine(settings))
     graph = build_lifecycle(stores, services)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),

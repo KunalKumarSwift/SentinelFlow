@@ -46,5 +46,16 @@ jobs:
         run: uv run lint-imports
       - name: File size
         run: uv run python scripts/check_file_size.py --max 120
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: 0.70.0
+      - name: Rego unit tests
+        run: opa test deploy/opa -v
+      - name: Start OPA with the SentinelFlow policy
+        run: |
+          opa run --server --addr 127.0.0.1:8181 deploy/opa &
+          for _ in $(seq 1 30); do curl -sf 127.0.0.1:8181/health && break; sleep 1; done
       - name: Tests
+        env:
+          TEST_OPA_URL: http://127.0.0.1:8181
         run: uv run pytest -m "not e2e" --cov --cov-report=term-missing

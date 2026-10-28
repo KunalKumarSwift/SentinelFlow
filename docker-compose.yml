@@ -7,6 +7,7 @@
 # `--profile observability` adds Prometheus (:9090), Grafana (:3000, dashboard provisioned)
 # and Jaeger (:16686); run it with OTLP_ENDPOINT=http://jaeger:4318 to send traces.
 # `--profile oidc` starts Keycloak (:8080, realm imported); set AUTH_MODE=oidc to use it.
+# `--profile opa` starts OPA with deploy/opa; set POLICY_ENGINE=opa to use it.
 
 x-app: &app
   build: .
@@ -21,6 +22,8 @@ x-app: &app
     OLLAMA_URL: http://ollama:11434
     OTLP_ENDPOINT: ${OTLP_ENDPOINT:-}
     AUTH_MODE: ${AUTH_MODE:-hs256}
+    POLICY_ENGINE: ${POLICY_ENGINE:-incode}
+    OPA_URL: http://opa:8181
     OIDC_ISSUER: http://localhost:8080/realms/sentinelflow
     OIDC_JWKS_URL: http://keycloak:8080/realms/sentinelflow/protocol/openid-connect/certs
   depends_on:
@@ -76,6 +79,12 @@ services:
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ["3000:3000"]
+
+  opa:
+    image: openpolicyagent/opa:0.70.0
+    profiles: [opa]
+    command: ["run", "--server", "--addr", "0.0.0.0:8181", "/policies"]
+    volumes: ["./deploy/opa:/policies:ro"]
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.7

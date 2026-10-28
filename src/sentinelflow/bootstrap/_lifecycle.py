@@ -11,7 +11,7 @@ from sentinelflow.providers.events.memory_event_store import MemoryEventStore
 from sentinelflow.providers.identity.mock_identity import MockIdentity
 from sentinelflow.providers.intel.mock_intel import MockThreatIntel
 from sentinelflow.security.audit_recorder import AuditRecorder
-from sentinelflow.security.policy_engine import InCodePolicyEngine
+from sentinelflow.security.policy import PolicyEngine
 from sentinelflow.security.redaction import Redactor
 from sentinelflow.security.tool_guard import ToolGuard
 from sentinelflow.simulator.demo_seed import demo_events, demo_seed_data
@@ -30,6 +30,7 @@ class Services:
     redactor: Redactor
     tracer: Tracer
     demo_seed: int
+    policy: PolicyEngine
 
 
 def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
@@ -49,7 +50,7 @@ def build_lifecycle(stores: Stores, services: Services) -> LifecycleGraph:
         runs=stores.runs,
         triage=triage,
         investigation=investigation,
-        guard=ToolGuard(InCodePolicyEngine(), recorder),
+        guard=ToolGuard(services.policy, recorder),
         identity=identity,
         recorder=recorder,
         clock=stores.clock,
