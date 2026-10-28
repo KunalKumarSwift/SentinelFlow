@@ -14,6 +14,7 @@ MANAGED_VARS = (
     "DATABASE_URL",
     "QUEUE_BACKEND",
     "RUN_WORKER_IN_API",
+    "LOG_FORMAT",
 )
 
 
@@ -97,3 +98,10 @@ def test_api_without_worker_is_allowed_with_postgres_and_redis(
     }.items():
         monkeypatch.setenv(name, value)
     assert load_settings().run_worker_in_api is False
+
+
+def test_logs_are_json_unless_console_is_chosen(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    assert load_settings().log_format == "json"
+    monkeypatch.setenv("LOG_FORMAT", "console")
+    assert load_settings().log_format == "console"

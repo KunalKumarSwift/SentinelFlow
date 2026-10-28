@@ -38,6 +38,7 @@ class Auth:
         if credentials is None:
             raise AuthenticationError("missing bearer token")
         principal = self._tokens.verify(credentials.credentials)
+        request.state.tenant_id = principal.tenant_id  # for the access-log line
         if self._throttle is not None:
             # After verification: the tenant comes from a trusted token, never the request.
             self._throttle.check(principal.tenant_id, request.method, request.url.path)

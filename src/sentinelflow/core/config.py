@@ -13,7 +13,8 @@ Environment:
     QUEUE_BACKEND (default: "memory"), REDIS_URL (default: "redis://localhost:6379/0"),
     INTEL_BACKEND (default: "mock"), TENANT_TOKEN_BUDGET_DAILY (default: 200000),
     API_HOST (default: "127.0.0.1"), API_PORT (default: 8000),
-    RUN_WORKER_IN_API (default: true; false needs Postgres storage and a Redis queue).
+    RUN_WORKER_IN_API (default: true; false needs Postgres storage and a Redis queue),
+    LOG_FORMAT (default: "json"; "console" for human-readable local logs).
 """
 
 from typing import Literal, Self
@@ -42,6 +43,7 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = Field(default=8000, gt=0, lt=65536)
     run_worker_in_api: bool = True
+    log_format: Literal["json", "console"] = "json"
 
     @model_validator(mode="after")
     def _require_backend_credentials(self) -> Self:

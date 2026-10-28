@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from sentinelflow import __version__
-from sentinelflow.api import problems
+from sentinelflow.api import correlation, problems
 from sentinelflow.api.auth import Auth
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.api.routes.alerts import build_alerts_router
@@ -25,6 +25,7 @@ def create_app(container: ApiContainer) -> FastAPI:
     """
     app = FastAPI(title="SentinelFlow", version=__version__)
     problems.install(app)
+    correlation.install(app, container.ids, container.clock)
     auth = Auth(container.tokens, container.recorder(), container.throttle)
     app.include_router(build_health_router())
     app.include_router(build_alerts_router(container, auth))

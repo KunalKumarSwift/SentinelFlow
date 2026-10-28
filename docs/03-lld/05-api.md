@@ -15,7 +15,7 @@ to domain objects at the edge.
 - Errors use **RFC 9457 problem details**:
   `{"type": "...", "title": "Forbidden", "status": 403, "detail": "missing permission action:approve:high", "correlation_id": "..."}`
 - Lists use cursor pagination: `?limit=50&cursor=<opaque>` → `{"items": [...], "next_cursor": "..."}`.
-- Every response carries `X-Correlation-ID` (generated if absent) for log/trace correlation.
+- Every response carries `X-Correlation-ID` (a valid incoming one, `[A-Za-z0-9_-]{1,64}`, is reused; otherwise generated) for log/trace correlation ✅.
 
 ## 2. Endpoints
 

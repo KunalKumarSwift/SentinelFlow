@@ -13,6 +13,7 @@ from typing import Protocol
 from sentinelflow.api.app import create_app
 from sentinelflow.bootstrap.wiring import build_runtime
 from sentinelflow.core.config import load_settings
+from sentinelflow.core.logging import configure_logging
 
 POLL_SECONDS = 0.5
 
@@ -33,13 +34,16 @@ def main() -> None:  # pragma: no cover -- process entry point, covered by the R
     import uvicorn
 
     settings = load_settings()
+    configure_logging(json_lines=settings.log_format == "json")
     runtime = build_runtime(settings)
     stop = threading.Event()
     thread = threading.Thread(target=work_until, args=(runtime.worker, stop), daemon=True)
     if settings.run_worker_in_api:
         thread.start()
     try:
-        uvicorn.run(create_app(runtime.container), host=settings.api_host, port=settings.api_port)
+        app = create_app(runtime.container)
+        # Our middleware writes a structured access line, so uvicorn's own is off.
+        uvicorn.run(app, host=settings.api_host, port=settings.api_port, access_log=False)
     finally:
         stop.set()
         if thread.is_alive():
