@@ -30,4 +30,15 @@ def fresh_pool() -> ConnectionPool:
         pytest.skip("TEST_DATABASE_URL not set")
     with pool.connection() as conn:
         conn.execute("truncate incidents, alerts, approvals, workflow_runs, audit_events")
+        # LangGraph's tables exist once a checkpointer has run setup(); empty them too.
+        conn.execute(
+            "do $$ begin if to_regclass('checkpoints') is not null then"
+            " truncate checkpoints, checkpoint_blobs, checkpoint_writes; end if; end $$"
+        )
     return pool
+
+
+def database_url() -> str:
+    """Return the test database URL after emptying every table, or skip the test."""
+    fresh_pool()
+    return os.environ["TEST_DATABASE_URL"]

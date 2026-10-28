@@ -1,7 +1,8 @@
-"""Build the single-process runtime: API container plus one worker sharing in-memory stores.
+"""Build the single-process runtime: API container plus one worker sharing the stores.
 
-Phase 2 still supports in-memory storage and queue and mock intel/identity only; other
-backends are rejected here so a misconfiguration fails at start-up, not mid-run.
+Storage may be memory or PostgreSQL; the queue is in memory and intel/identity are mocks
+until Phase 3. Other backends are rejected here so a misconfiguration fails at start-up,
+not mid-run.
 """
 
 import hashlib
@@ -9,7 +10,8 @@ from dataclasses import dataclass
 
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.bootstrap._lifecycle import build_lifecycle
-from sentinelflow.bootstrap._stores import Stores
+from sentinelflow.bootstrap._pg_stores import postgres_stores
+from sentinelflow.bootstrap._stores import Stores, memory_stores
 from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
@@ -41,8 +43,8 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     Raises:
         ValueError: If settings ask for a backend this phase does not provide.
     """
-    _require_memory_backends(settings)
-    stores = Stores(SystemClock())
+    _require_supported_backends(settings)
+    stores = _stores(settings)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
     graph = build_lifecycle(stores, make_llm(settings), redactor, demo_seed)
     handler = Dispatcher(
@@ -79,9 +81,15 @@ def _derive_key(secret: str, purpose: str) -> bytes:
     return hashlib.sha256(f"sentinelflow:{purpose}:{secret}".encode()).digest()
 
 
-def _require_memory_backends(settings: Settings) -> None:
-    chosen = (settings.storage_backend, settings.queue_backend, settings.intel_backend)
-    if chosen != ("memory", "memory", "mock"):
+def _stores(settings: Settings) -> Stores:
+    if settings.database_url is not None and settings.storage_backend == "postgres":
+        return postgres_stores(SystemClock(), settings.database_url.get_secret_value())
+    return memory_stores(SystemClock())
+
+
+def _require_supported_backends(settings: Settings) -> None:
+    chosen = (settings.queue_backend, settings.intel_backend)
+    if chosen != ("memory", "mock"):
         raise ValueError(
-            f"single-process mode supports memory storage/queue and mock intel, got {chosen}"
+            f"single-process mode supports a memory queue and mock intel, got {chosen}"
         )
