@@ -25,6 +25,7 @@ from sentinelflow.workflows.orchestrator.steps.contain_step import make_contain_
 from sentinelflow.workflows.orchestrator.steps.investigate_step import make_investigate_step
 from sentinelflow.workflows.orchestrator.steps.report_step import make_report_step
 from sentinelflow.workflows.orchestrator.steps.triage_step import make_triage_step
+from sentinelflow.workflows.orchestrator.tracing import traced
 
 LifecycleGraph = CompiledStateGraph[LifecycleState, None, LifecycleState, LifecycleState]
 
@@ -34,11 +35,11 @@ def build_lifecycle_graph(
 ) -> LifecycleGraph:
     """Return the compiled lifecycle graph persisting checkpoints in ``checkpointer``."""
     graph = StateGraph(LifecycleState)
-    graph.add_node("triage", make_triage_step(deps))
-    graph.add_node("investigate", make_investigate_step(deps))
-    graph.add_node("await_decisions", make_await_step(deps))
-    graph.add_node("contain", make_contain_step(deps))
-    graph.add_node("report", make_report_step(deps))
+    graph.add_node("triage", traced(deps.tracer, "triage", make_triage_step(deps)))
+    graph.add_node("investigate", traced(deps.tracer, "investigate", make_investigate_step(deps)))
+    graph.add_node("await_decisions", traced(deps.tracer, "await_decisions", make_await_step(deps)))
+    graph.add_node("contain", traced(deps.tracer, "contain", make_contain_step(deps)))
+    graph.add_node("report", traced(deps.tracer, "report", make_report_step(deps)))
     graph.add_edge(START, "triage")
     graph.add_conditional_edges("triage", routes.after_triage(deps), ["investigate", END])
     graph.add_conditional_edges(

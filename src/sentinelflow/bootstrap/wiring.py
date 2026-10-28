@@ -12,13 +12,14 @@ from prometheus_client import CollectorRegistry
 
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.bootstrap._container import build_container
-from sentinelflow.bootstrap._lifecycle import build_lifecycle
+from sentinelflow.bootstrap._lifecycle import Services, build_lifecycle
 from sentinelflow.bootstrap._pg_stores import postgres_stores
 from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores, memory_stores
 from sentinelflow.core.clock import SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.facades.llm_facade import make_llm
 from sentinelflow.facades.shared_state_facade import make_run_queue, make_token_budget
+from sentinelflow.facades.tracing_facade import make_tracer
 from sentinelflow.providers.llm.budgeted_llm import BudgetedLLM
 from sentinelflow.providers.metrics.counting_audit_store import CountingAuditStore
 from sentinelflow.providers.metrics.prometheus_metrics import PrometheusMetrics
@@ -48,13 +49,14 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     metrics = PrometheusMetrics(CollectorRegistry())
     stores = _stores(settings, metrics)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
-    llm = _budgeted_llm(settings, stores, metrics)
-    graph = build_lifecycle(stores, llm, redactor, demo_seed)
+    tracer = make_tracer(settings)
+    services = Services(_budgeted_llm(settings, stores, metrics), redactor, tracer, demo_seed)
+    graph = build_lifecycle(stores, services)
     handler = Dispatcher(
         StartRunHandler(stores.runs, graph, stores.clock),
         ResumeRunHandler(stores.runs, graph, stores.clock),
     )
-    worker = Worker(stores.queue, handler, "worker-1", metrics=metrics)
+    worker = Worker(stores.queue, handler, "worker-1", metrics=metrics, tracer=tracer)
     return Runtime(build_container(settings, stores, redactor, metrics), worker, metrics)
 
 

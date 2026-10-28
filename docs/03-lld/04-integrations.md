@@ -140,6 +140,7 @@ def make_llm(settings: Settings) -> LLMProvider:
 | `RUN_WORKER_IN_API` | `true` | `false` for API-only processes (needs `postgres` + `redis`) |
 | `LOG_FORMAT` | `json` | `json` lines or human-readable `console` |
 | `METRICS_PORT` | `9100` | Port of a worker's Prometheus endpoint |
+| `OTLP_ENDPOINT` | — | OTLP/HTTP collector, e.g. `http://jaeger:4318`; unset = tracing off |
 
 ## 5. Adding a new provider (checklist)
 

@@ -10,6 +10,7 @@ from tests.builders import T0
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_metrics import RecordingMetrics
 from tests.fakes.log_capture import capture_logs
+from tests.fakes.spans import span_recorder
 
 CMD = StartRun("run-1", "acme", "triage", "inc-1", "alt-1", "svc-orchestrator")
 
@@ -58,3 +59,13 @@ def test_outcomes_are_reported_as_metrics() -> None:
         Worker(queue, handler, "w1", metrics=metrics).run_once()
     outcomes = [call[2] for call in metrics.calls]
     assert outcomes == ["done", "retry", "dead_lettered"]
+
+
+def test_each_command_runs_in_a_span() -> None:
+    tracer, spans = span_recorder()
+    queue = MemoryRunQueue(FakeClock(T0), timedelta(seconds=60))
+    queue.publish(CMD)
+    Worker(queue, lambda _: None, "w1", tracer=tracer).run_once()
+    [span] = spans.get_finished_spans()
+    assert span.name == "run.command StartRun"
+    assert span.attributes == {"run_id": "run-1", "tenant_id": "acme", "attempt": 1}
