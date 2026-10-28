@@ -47,23 +47,23 @@ class PgIncidentRepository:
 
     def add(self, incident: Incident) -> None:
         """Insert a new incident; an existing id raises ``ValueError``."""
-        if execute(self._pool, _INSERT, _params(incident)) == 0:
+        if execute(self._pool, incident.tenant_id, _INSERT, _params(incident)) == 0:
             raise ValueError(f"incident {incident.id} exists")
 
     def get(self, tenant_id: str, incident_id: str) -> Incident | None:
         """Return the tenant's incident, if any."""
-        row = fetch_one(self._pool, _SELECT_ONE, (tenant_id, incident_id))
+        row = fetch_one(self._pool, tenant_id, _SELECT_ONE, (tenant_id, incident_id))
         return None if row is None else _incident(row)
 
     def update(self, incident: Incident) -> None:
         """Replace a stored incident; an unknown id raises ``KeyError``."""
         params = (*_params(incident)[2:8], incident.tenant_id, incident.id)
-        if execute(self._pool, _UPDATE, params) == 0:
+        if execute(self._pool, incident.tenant_id, _UPDATE, params) == 0:
             raise KeyError(incident.id)
 
     def list(self, tenant_id: str) -> Sequence[Incident]:
         """Return the tenant's incidents, oldest first."""
-        rows = fetch_all(self._pool, _SELECT_TENANT, (tenant_id,))
+        rows = fetch_all(self._pool, tenant_id, _SELECT_TENANT, (tenant_id,))
         return [_incident(row) for row in rows]
 
 

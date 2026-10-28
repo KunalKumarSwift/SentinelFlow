@@ -24,13 +24,13 @@ class PgTicketing:
 
     def upsert(self, tenant_id: str, incident_id: str, title: str, body: str) -> str:
         """Create or replace the incident's ticket and return its id."""
-        row = fetch_one(self._pool, _UPSERT, (tenant_id, incident_id, title, body))
+        row = fetch_one(self._pool, tenant_id, _UPSERT, (tenant_id, incident_id, title, body))
         assert row is not None  # noqa: S101 -- "returning" always yields a row
         return text(row, "id")
 
     def get(self, tenant_id: str, incident_id: str) -> Ticket | None:
         """Return the incident's ticket, if any."""
-        row = fetch_one(self._pool, _SELECT, (tenant_id, incident_id))
+        row = fetch_one(self._pool, tenant_id, _SELECT, (tenant_id, incident_id))
         if row is None:
             return None
         return Ticket(text(row, "id"), incident_id, text(row, "title"), text(row, "body"))

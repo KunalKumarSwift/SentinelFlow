@@ -32,16 +32,16 @@ class PgAlertRepository:
         a = stored.alert
         params = (a.id, a.tenant_id, stored.incident_id, stored.fingerprint, a.source)
         rest = (a.rule_id, a.title, a.observed_at, entities_json(a.entities), Jsonb(dict(a.raw)))
-        execute(self._pool, _INSERT, params + rest)
+        execute(self._pool, a.tenant_id, _INSERT, params + rest)
 
     def latest_with_fingerprint(self, tenant_id: str, fingerprint: str) -> StoredAlert | None:
         """Return the most recently observed alert with ``fingerprint``, if any."""
-        row = fetch_one(self._pool, _SELECT_LATEST, (tenant_id, fingerprint))
+        row = fetch_one(self._pool, tenant_id, _SELECT_LATEST, (tenant_id, fingerprint))
         return None if row is None else _stored(row)
 
     def get(self, tenant_id: str, alert_id: str) -> StoredAlert | None:
         """Return the tenant's alert, if any."""
-        row = fetch_one(self._pool, _SELECT_ONE, (tenant_id, alert_id))
+        row = fetch_one(self._pool, tenant_id, _SELECT_ONE, (tenant_id, alert_id))
         return None if row is None else _stored(row)
 
 

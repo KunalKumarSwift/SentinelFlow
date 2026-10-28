@@ -12,12 +12,10 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: sentinel
-          POSTGRES_PASSWORD: sentinel
-          POSTGRES_DB: sentinelflow
+          POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U sentinel" --health-interval 5s
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
           --health-timeout 5s --health-retries 10
       redis:
         image: redis:7
@@ -31,6 +29,13 @@ jobs:
       TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
+      # The app connects as an ordinary role: superusers bypass row-level security.
+      - name: Create application database role
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -c "create role sentinel login password 'sentinel'"
+          psql -h localhost -U postgres -c "create database sentinelflow owner sentinel"
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"

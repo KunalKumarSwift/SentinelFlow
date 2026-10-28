@@ -47,28 +47,32 @@ class PgApprovalRepository:
         a = approval
         params = (a.id, a.tenant_id, a.run_id, action_json(a.action), a.required_role)
         rest = (a.required_count, a.expires_at, decisions_json(a.decisions), a.status.value)
-        if execute(self._pool, _INSERT, params + rest) == 0:
+        if execute(self._pool, a.tenant_id, _INSERT, params + rest) == 0:
             raise ValueError(f"approval {a.id} already exists")
 
     def get(self, tenant_id: str, approval_id: str) -> Approval | None:
         """Return the tenant's approval, if any."""
-        row = fetch_one(self._pool, _SELECT_ONE, (tenant_id, approval_id))
+        row = fetch_one(self._pool, tenant_id, _SELECT_ONE, (tenant_id, approval_id))
         return None if row is None else _approval(row)
 
     def update(self, approval: Approval) -> None:
         """Store new decisions and status; an unknown id raises ``KeyError``."""
         a = approval
         params = (decisions_json(a.decisions), a.status.value, a.expires_at, a.tenant_id, a.id)
-        if execute(self._pool, _UPDATE, params) == 0:
+        if execute(self._pool, a.tenant_id, _UPDATE, params) == 0:
             raise KeyError(f"approval {a.id} does not exist")
 
     def for_run(self, tenant_id: str, run_id: str) -> Sequence[Approval]:
         """Return the run's approvals in creation order."""
-        return [_approval(r) for r in fetch_all(self._pool, _SELECT_RUN, (tenant_id, run_id))]
+        return [
+            _approval(r) for r in fetch_all(self._pool, tenant_id, _SELECT_RUN, (tenant_id, run_id))
+        ]
 
     def pending(self, tenant_id: str) -> Sequence[Approval]:
         """Return the tenant's pending approvals in creation order."""
-        return [_approval(r) for r in fetch_all(self._pool, _SELECT_PENDING, (tenant_id,))]
+        return [
+            _approval(r) for r in fetch_all(self._pool, tenant_id, _SELECT_PENDING, (tenant_id,))
+        ]
 
 
 def _approval(row: Row) -> Approval:

@@ -49,12 +49,12 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel
-      POSTGRES_DB: sentinelflow
-    volumes: [pgdata:/var/lib/postgresql/data]
+      POSTGRES_PASSWORD: postgres  # superuser for administration only
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sentinelflow"]
       interval: 5s
       retries: 10
 

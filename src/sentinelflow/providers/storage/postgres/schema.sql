@@ -83,3 +83,24 @@ create table if not exists tickets (
   body         text not null,
   primary key (tenant_id, incident_id)
 );
+
+-- Row-level security (defence in depth). Every repository transaction first runs
+-- set_config('app.tenant_id', <tenant>, true); rows of other tenants are then invisible
+-- and cannot be written, even by a query that forgets its tenant filter. FORCE applies
+-- the policy to the table owner too; superusers still bypass RLS, so the application
+-- must connect as an ordinary role.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['incidents', 'alerts', 'approvals', 'workflow_runs', 'audit_events', 'tickets'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('alter table %I force row level security', t);
+    if not exists (select 1 from pg_policies where tablename = t and policyname = 'tenant_isolation') then
+      execute format(
+        'create policy tenant_isolation on %I'
+        ' using (tenant_id = current_setting(''app.tenant_id'', true))'
+        ' with check (tenant_id = current_setting(''app.tenant_id'', true))', t);
+    end if;
+  end loop;
+end $$;
