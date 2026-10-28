@@ -1,7 +1,7 @@
 """Build the single-process runtime: API container plus one worker sharing the stores.
 
-Storage may be memory or PostgreSQL; the queue is in memory and intel/identity are mocks
-until Phase 3. Other backends are rejected here so a misconfiguration fails at start-up,
+Storage may be memory or PostgreSQL and the queue memory or Redis; intel and identity
+are mocks. Other backends are rejected here so a misconfiguration fails at start-up,
 not mid-run.
 """
 
@@ -11,11 +11,14 @@ from dataclasses import dataclass
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.bootstrap._lifecycle import build_lifecycle
 from sentinelflow.bootstrap._pg_stores import postgres_stores
-from sentinelflow.bootstrap._stores import Stores, memory_stores
-from sentinelflow.core.clock import SystemClock
+from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores, memory_stores
+from sentinelflow.contracts.run_queue import RunQueue
+from sentinelflow.core.clock import Clock, SystemClock
 from sentinelflow.core.config import Settings
 from sentinelflow.core.ids import UuidIdFactory
 from sentinelflow.facades.llm_facade import make_llm
+from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
+from sentinelflow.providers.queue.redis_factory import open_redis_queue
 from sentinelflow.runtime.dispatch import Dispatcher
 from sentinelflow.runtime.resume_handler import ResumeRunHandler
 from sentinelflow.runtime.start_handler import StartRunHandler
@@ -82,14 +85,19 @@ def _derive_key(secret: str, purpose: str) -> bytes:
 
 
 def _stores(settings: Settings) -> Stores:
+    clock = SystemClock()
+    queue = _queue(settings, clock)
     if settings.database_url is not None and settings.storage_backend == "postgres":
-        return postgres_stores(SystemClock(), settings.database_url.get_secret_value())
-    return memory_stores(SystemClock())
+        return postgres_stores(clock, settings.database_url.get_secret_value(), queue)
+    return memory_stores(clock, queue)
+
+
+def _queue(settings: Settings, clock: Clock) -> RunQueue:
+    if settings.queue_backend == "redis":
+        return open_redis_queue(settings.redis_url, clock, VISIBILITY_TIMEOUT)
+    return MemoryRunQueue(clock, VISIBILITY_TIMEOUT)
 
 
 def _require_supported_backends(settings: Settings) -> None:
-    chosen = (settings.queue_backend, settings.intel_backend)
-    if chosen != ("memory", "mock"):
-        raise ValueError(
-            f"single-process mode supports a memory queue and mock intel, got {chosen}"
-        )
+    if settings.intel_backend != "mock":
+        raise ValueError(f"intel backend {settings.intel_backend!r} is not available yet")

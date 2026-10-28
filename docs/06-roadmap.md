@@ -64,7 +64,7 @@ the definition of done in the [engineering guidelines](04-engineering-guidelines
 
 | Slice | Deliverable | First tests |
 |---|---|---|
-| 3.1 | `RedisRunQueue` (streams, consumer group, re-claim, DLQ) | Contract tests shared with memory queue |
+| 3.1 ✅ | `RedisRunQueue` (visibility-deadline sorted set, Lua claim, DLQ; ADR 0008) | Contract tests shared with memory queue |
 | 3.2 | Docker Compose: api, worker ×N, postgres, redis, ollama | Smoke test script |
 | 3.3 | Rate limiting + LLM budget decorator | 429 after limit; `BudgetExceededError` → NEEDS_REVIEW |
 | 3.4 | structlog + correlation IDs | Log line contains run_id/tenant_id |

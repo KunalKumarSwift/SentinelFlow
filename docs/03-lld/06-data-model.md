@@ -153,8 +153,10 @@ the authenticated principal. Application-level tenant checks stay in place (defe
 
 | Key | Type | Purpose |
 |---|---|---|
-| `sf:runs` | stream | Run commands; consumer group `workers` |
-| `sf:runs:dlq` | stream | Dead-lettered commands |
+| `sf:runs:visible` | sorted set | Message id → epoch-ms it becomes claimable (ADR 0008) |
+| `sf:runs:payload` / `sf:runs:attempts` | hash | Encoded command / claim count per message |
+| `sf:runs:seq` | string (counter) | Ordered message ids |
+| `sf:runs:dlq` | list | Dead-lettered commands with reason |
 | `sf:ratelimit:{tenant}:{bucket}` | string (counter, TTL) | API rate limiting |
 | `sf:budget:{tenant}:{yyyymmdd}` | string (counter, TTL 48 h) | Daily LLM token usage |
 | `sf:dedup:{tenant}:{fingerprint}` | string (TTL = window) | Fast dedup lookup before DB |

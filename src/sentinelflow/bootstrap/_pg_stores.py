@@ -1,10 +1,8 @@
 """PostgreSQL-backed stores (``STORAGE_BACKEND=postgres``)."""
 
-from datetime import timedelta
-
-from sentinelflow.bootstrap._stores import VISIBILITY_TIMEOUT, Stores
+from sentinelflow.bootstrap._stores import Stores
+from sentinelflow.contracts.run_queue import RunQueue
 from sentinelflow.core.clock import Clock
-from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.providers.storage.postgres.checkpointer import open_checkpointer
 from sentinelflow.providers.storage.postgres.pg_alerts import PgAlertRepository
 from sentinelflow.providers.storage.postgres.pg_approvals import PgApprovalRepository
@@ -15,7 +13,7 @@ from sentinelflow.providers.storage.postgres.pool import apply_schema, open_pool
 from sentinelflow.providers.ticketing.memory_ticketing import MemoryTicketing
 
 
-def postgres_stores(clock: Clock, url: str, visibility: timedelta = VISIBILITY_TIMEOUT) -> Stores:
+def postgres_stores(clock: Clock, url: str, queue: RunQueue) -> Stores:
     """Open pools, create missing tables and return Postgres-backed stores."""
     pool = open_pool(url)
     apply_schema(pool)
@@ -28,5 +26,5 @@ def postgres_stores(clock: Clock, url: str, visibility: timedelta = VISIBILITY_T
         audit=PgAuditStore(pool),
         checkpointer=open_checkpointer(url),
         ticketing=MemoryTicketing(),
-        queue=MemoryRunQueue(clock, visibility),
+        queue=queue,
     )
