@@ -27,19 +27,19 @@ class PgRunRepository:
         r = record
         params = (r.id, r.tenant_id, r.workflow, r.incident_id, r.alert_id)
         rest = (principal_json(r.initiator), r.status.value, r.updated_at)
-        if execute(self._pool, _INSERT, params + rest) == 0:
+        if execute(self._pool, r.tenant_id, _INSERT, params + rest) == 0:
             raise ValueError(f"run {r.id} already exists")
 
     def get(self, tenant_id: str, run_id: str) -> RunRecord | None:
         """Return the tenant's run record, if any."""
-        row = fetch_one(self._pool, _SELECT_ONE, (tenant_id, run_id))
+        row = fetch_one(self._pool, tenant_id, _SELECT_ONE, (tenant_id, run_id))
         return None if row is None else _record(row)
 
     def update(self, record: RunRecord) -> None:
         """Store the new status; an unknown id raises ``KeyError``."""
         r = record
         params = (r.status.value, r.updated_at, r.tenant_id, r.id)
-        if execute(self._pool, _UPDATE, params) == 0:
+        if execute(self._pool, r.tenant_id, _UPDATE, params) == 0:
             raise KeyError(f"run {r.id} does not exist")
 
 

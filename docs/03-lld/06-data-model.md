@@ -137,18 +137,32 @@ LangGraph checkpoint tables are created and owned by `langgraph-checkpoint-postg
   insert means the action already ran → return the stored result.
 - **DB grants**: app role has `insert, select` only on `audit_events` (no update/delete).
 
-## 4. Multi-tenancy (Phase 4)
+## 4. Multi-tenancy: row-level security (built, slice 4.3)
 
-Row-level security on every table:
+Every tenant table (`incidents`, `alerts`, `approvals`, `workflow_runs`, `audit_events`,
+`tickets`) has RLS **enabled and forced** with one policy:
 
 ```sql
-alter table incidents enable row level security;
 create policy tenant_isolation on incidents
-  using (tenant_id = current_setting('app.tenant_id'));
+  using      (tenant_id = current_setting('app.tenant_id', true))
+  with check (tenant_id = current_setting('app.tenant_id', true));
 ```
 
-The repository sets `set local app.tenant_id = $1` at the start of each transaction from
-the authenticated principal. Application-level tenant checks stay in place (defence in depth).
+Each repository transaction starts with `select set_config('app.tenant_id', $tenant, true)`
+(`db.scope_to_tenant`; transaction-local, so a pooled connection never leaks a tenant).
+Without that setting a query sees **nothing**; with it, rows of other tenants are invisible
+and cannot be inserted or updated, even by a query that forgets its `where tenant_id`.
+Application-level tenant checks stay in place (defence in depth).
+
+- `FORCE` makes the policy apply to the table owner too. **Superusers always bypass RLS**, so
+  the app must connect as an ordinary role: CI and Compose create `sentinel` as a
+  non-superuser (`deploy/postgres/init.sql`).
+- LangGraph checkpoint tables hold ids only (ADR 0007) and have no tenant column, so they are
+  not under RLS.
+- Production hardening beyond this demo: a separate migration owner, and an app role that
+  owns nothing (it then cannot `ALTER TABLE ... NO FORCE`).
+- Tests (`tests/contracts/test_row_level_security.py`): own rows visible; no context sees
+  nothing; cross-tenant insert refused; every table has forced RLS.
 
 ## 5. Redis keys (Phase 3)
 

@@ -7,7 +7,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
 from sentinelflow.domain.audit import AuditEvent, AuditEventDraft
-from sentinelflow.providers.storage.postgres.db import fetch_all
+from sentinelflow.providers.storage.postgres.db import fetch_all, scope_to_tenant
 from sentinelflow.providers.storage.postgres.rows import Row, integer, json_object, moment, text
 from sentinelflow.security.audit_chain import chain_next
 
@@ -32,6 +32,7 @@ class PgAuditStore:
     def append(self, draft: AuditEventDraft) -> AuditEvent:
         """Link ``draft`` to the end of its tenant's chain inside one transaction."""
         with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            scope_to_tenant(cur, draft.tenant_id)
             cur.execute(_LOCK, (draft.tenant_id,))
             cur.execute(_LAST, (draft.tenant_id,))
             last = cur.fetchone()
@@ -41,7 +42,7 @@ class PgAuditStore:
 
     def read(self, tenant_id: str, after_seq: int, limit: int) -> Sequence[AuditEvent]:
         """Return up to ``limit`` events after ``after_seq``, in order."""
-        rows = fetch_all(self._pool, _PAGE, (tenant_id, after_seq, limit))
+        rows = fetch_all(self._pool, tenant_id, _PAGE, (tenant_id, after_seq, limit))
         return [_event(row) for row in rows]
 
 
