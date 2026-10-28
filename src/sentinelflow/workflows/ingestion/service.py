@@ -23,6 +23,7 @@ class IngestResult:
     alert_id: str
     incident_id: str
     deduplicated: bool
+    incident: Incident
 
 
 class IngestionService:
@@ -48,7 +49,7 @@ class IngestionService:
             incident = self._new_incident(alert, severity)
             self._deps.incidents.add(incident)
         self._deps.alerts.add(StoredAlert(alert, fingerprint, incident.id))
-        return IngestResult(alert.id, incident.id, deduplicated=existing is not None)
+        return IngestResult(alert.id, incident.id, existing is not None, incident)
 
     def _open_duplicate_of(self, alert: Alert, fingerprint: str) -> Incident | None:
         previous = self._deps.alerts.latest_with_fingerprint(alert.tenant_id, fingerprint)

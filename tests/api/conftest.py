@@ -1,6 +1,7 @@
-"""API test wiring: an app built from fakes and helpers to mint tokens."""
+"""API test wiring: an app built from in-memory parts and helpers to mint tokens."""
 
 from collections.abc import Callable
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,9 +9,15 @@ from fastapi.testclient import TestClient
 from sentinelflow.api.app import create_app
 from sentinelflow.api.container import ApiContainer
 from sentinelflow.domain.principals import Principal, PrincipalKind
+from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
+from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
+from sentinelflow.providers.storage.memory_incidents import MemoryIncidentRepository
 from sentinelflow.security.tokens import Hs256TokenService
+from sentinelflow.workflows.ingestion import IngestionDeps, IngestionService
+from sentinelflow.workflows.registry import DEFAULT_REGISTRY
 from tests.builders import T0
 from tests.fakes.fake_clock import FakeClock
+from tests.fakes.fake_ids import SequentialIdFactory
 
 SECRET = "a" * 32
 TokenFor = Callable[..., dict[str, str]]
@@ -22,13 +29,31 @@ def tokens() -> Hs256TokenService:
 
 
 def make_container(tokens: Hs256TokenService, app_env: str = "dev") -> ApiContainer:
-    """Return a container wired with test doubles."""
-    return ApiContainer(app_env=app_env, tokens=tokens)
+    """Return a container wired with in-memory parts and deterministic ids/time."""
+    clock, ids = FakeClock(T0), SequentialIdFactory()
+    incidents = MemoryIncidentRepository()
+    ingestion = IngestionService(
+        IngestionDeps(MemoryAlertRepository(), incidents, ids, clock, default_team="soc-emea")
+    )
+    return ApiContainer(
+        app_env=app_env,
+        tokens=tokens,
+        ingestion=ingestion,
+        incidents=incidents,
+        registry=DEFAULT_REGISTRY,
+        queue=MemoryRunQueue(clock, timedelta(seconds=60)),
+        ids=ids,
+    )
 
 
 @pytest.fixture
-def client(tokens: Hs256TokenService) -> TestClient:
-    return TestClient(create_app(make_container(tokens)))
+def container(tokens: Hs256TokenService) -> ApiContainer:
+    return make_container(tokens)
+
+
+@pytest.fixture
+def client(container: ApiContainer) -> TestClient:
+    return TestClient(create_app(container))
 
 
 @pytest.fixture

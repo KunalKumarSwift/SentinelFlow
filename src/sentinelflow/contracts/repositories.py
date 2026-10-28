@@ -4,6 +4,7 @@ Every read takes ``tenant_id`` explicitly so a query can never cross tenants by
 accident; implementations must treat another tenant's data as non-existent.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -49,4 +50,8 @@ class IncidentRepository(Protocol):
 
     def update(self, incident: Incident) -> None:
         """Replace a stored incident. Raises ``KeyError`` if it does not exist."""
+        ...
+
+    def list(self, tenant_id: str) -> Sequence[Incident]:
+        """Return the tenant's incidents, oldest first (pagination arrives with Postgres)."""
         ...

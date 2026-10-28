@@ -22,13 +22,13 @@ to domain objects at the edge.
 | Method | Path | Permission | Description |
 |---|---|---|---|
 | POST | `/v1/auth/dev-token` | none (mounted only when `APP_ENV=dev`; otherwise 404) | Issue a JWT for any identity — local demos only |
-| POST | `/v1/alerts` | `alert:ingest` | Ingest one alert; returns incident id and whether deduplicated |
-| GET | `/v1/incidents` | `incident:read` | List incidents visible to the caller (filters: status, severity) |
-| GET | `/v1/incidents/{id}` | `incident:read` | Incident detail, redacted per role |
+| POST | `/v1/alerts` | `alert:ingest` | 202. Ingest one alert (tenant from token; extra body fields → 422); a new incident gets a triage run queued (`run_id`) ✅ |
+| GET | `/v1/incidents` | `incident:read` | Tenant's incidents, oldest first ✅ (filters, cursor pagination and team scope: Phase 2) |
+| GET | `/v1/incidents/{id}` | `incident:read` | Incident detail; other tenants' incidents are 404 ✅ (PII redaction: Phase 2) |
 | POST | `/v1/incidents/{id}/close` | `incident:close` | Close / escalate with a reason |
-| GET | `/v1/workflows` | `incident:read` | Registry listing: name, version, required permission |
-| POST | `/v1/workflows/{name}/runs` | `workflow:run:<name>` | Start a workflow for an incident |
-| GET | `/v1/runs/{run_id}` | `incident:read` | Run status: `queued/running/waiting/completed/failed` |
+| GET | `/v1/workflows` | `incident:read` | Registry listing: name, version, required permission ✅ |
+| POST | `/v1/workflows/{name}/runs` | `workflow:run:<name>` | 202. Queue a run; unknown workflow/incident → 404, incident not `NEW` → 409 ✅ |
+| GET | `/v1/runs/{run_id}` | `incident:read` | Run status: `queued/running/waiting/completed/failed` (Phase 2, needs run records) |
 | GET | `/v1/approvals` | `action:approve:*` (any) | Pending approvals the caller is eligible for |
 | POST | `/v1/approvals/{id}/decision` | `action:approve:<impact>` | Approve / reject with reason |
 | GET | `/v1/audit` | `audit:read` | Audit events (filters: incident_id, verb, since) |
