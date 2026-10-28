@@ -131,24 +131,31 @@ same `AccessRequest` JSON; the same test-suite runs against both.
 
 ## 6. Tool guard (`security/tool_guard.py`)
 
-The single choke point for side-effecting provider calls inside workflows.
+The single choke point for **side-effecting** provider calls inside workflows (proposing
+and executing actions). Read-only enrichment lookups are not routed through it.
 
 ```python
 class ToolGuard:
-    def run(self, call: ToolCall, ctx: RunContext) -> ToolOutcome:
-        """Authorise, execute and audit one tool call on behalf of the run's initiator."""
+    def run[T](self, call: ToolCall, ctx: RunContext, effect: Callable[[str], T]) -> T:
+        """Authorise, then run effect(idempotency_key = f"{run_id}:{call.id}"), auditing all."""
+    def authorize(self, call: ToolCall, ctx: RunContext) -> Decision: ...
+
+ToolCall(id, permission, resource, action: ActionContext | None)
+RunContext(run_id, initiator: Principal, max_scope: frozenset[Permission])
 ```
 
 Steps:
 
-1. **Scope check** — `call.permission ∈ workflow.max_scope`, else deny.
-2. **Initiator check** — policy engine with the *initiator* principal (except `action:execute`,
-   which is checked against the orchestrator + approval quorum).
-3. **Orchestrator check** — policy engine with the *orchestrator* service principal.
-4. **Execute** — call the provider with idempotency key `run_id:call.id`.
-5. **Audit** — write `tool.allowed` / `tool.denied` / `tool.failed` with the reason.
+1. **Scope check** — `call.permission ∈ ctx.max_scope`, else deny `"… is outside workflow scope"`.
+2. **Initiator check** — policy engine with the *initiator*; skipped for `action:execute`
+   (no human role holds it — humans approve).
+3. **Orchestrator check** — policy engine with `orchestrator_for(tenant)`; for
+   `action:execute` this applies the `executed_only_if_approved` quorum rule.
+4. **Execute** — `effect(idempotency_key)`; providers use the key to ignore repeats.
+5. **Audit** — `tool.allowed` / `tool.denied` (with the reason, prefixed `initiator:` or
+   `orchestrator:`) / `tool.failed` (on `ProviderError`, which is re-raised).
 
-Effective permission = initiator ∩ workflow scope ∩ orchestrator. This blocks the
+Effective permission = workflow scope ∩ initiator ∩ orchestrator. This blocks the
 *confused deputy*: a workflow can never do more than the person who started it.
 
 ## 7. Audit chain (`security/audit_chain.py`)
