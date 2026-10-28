@@ -7,7 +7,57 @@ workflows, proposes containment actions, and executes those actions **only** aft
 policy engine and (when required) a human approver allow it. Every decision is written
 to a tamper-evident audit log.
 
-> Status: **Phase 2 complete**: alerts are triaged and investigated by LangGraph workflows; containment runs only after policy-checked human approval (two-person rule for critical incidents); every step is in a hash-chained audit log; reports are built from verified facts; state can live in PostgreSQL. Next: Phase 3 (Redis queue, observability, load tests). See the [roadmap](docs/06-roadmap.md).
+> **Status: all four roadmap phases are built** (MVP → secure containment → scale & observe →
+> production identity & deployment): 980+ tests at 100 % coverage, with contract suites that
+> run against in-memory **and** real PostgreSQL / Redis / OPA backends. Open items: VirusTotal,
+> GitHub Issues and Slack providers, a Langfuse callback, a demo video. See the
+> [roadmap](docs/06-roadmap.md).
+
+## Highlights
+
+- **LangGraph orchestration with human-in-the-loop.** A lifecycle graph (triage →
+  investigation → approvals → containment → report) pauses with `interrupt()` and resumes
+  from a **PostgreSQL checkpointer** on any worker, crash-safe and proven by tests.
+- **The LLM proposes, code decides.** The model can only *narrow* an allow-listed playbook,
+  never set severity, never dismiss a HIGH incident. Untrusted text goes in escaped
+  `<untrusted_data>` blocks, prompt injection is detected and forces human review, and every
+  side effect goes through a **tool guard**.
+- **Authorisation in depth.** RBAC + ABAC (separation of duties, no self-approval, distinct
+  approvers, two-person rule for critical incidents), an in-code engine **and** an equivalent
+  **OPA/Rego** policy passing one shared test suite, **Keycloak OIDC** (RS256/JWKS with key
+  rotation), and **PostgreSQL row-level security** per tenant.
+- **Tamper-evident audit.** A per-tenant SHA-256 hash chain, verifiable through the API.
+  Reports are written from verified audit facts, and PII is pseudonymised for anyone without
+  `incident:read_pii`.
+- **Scales out.** Stateless API and worker processes over Redis (an at-least-once queue with a
+  Lua claim and visibility timeout) and Postgres; per-tenant rate limits and LLM token
+  budgets. **Measured:** p95 69 ms under load and 18 → 55 runs/s from 1 → 4 workers
+  ([benchmarks](docs/benchmarks.md)).
+- **Observable and deployable.** structlog JSON with correlation ids, OpenTelemetry spans per
+  step, Prometheus metrics with a Grafana dashboard, Docker Compose, and a hardened Helm
+  chart (HPA, KEDA on queue depth, CronJob).
+- **Engineering discipline.** TDD, files ≤ 120 lines, functions ≤ 20 lines, `pyright --strict`,
+  enforced import layers, 8 ADRs, and full HLD/LLD docs updated with every change.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    SIEM[Detection sources<br/>simulator · SIEM] -->|POST /v1/alerts| API
+    Analyst[Analysts<br/>Streamlit UI · Swagger] -->|OIDC bearer token| API
+    subgraph API[FastAPI · stateless]
+      Auth[auth · rate limit] --> Policy[policy engine<br/>in-code or OPA]
+    end
+    API -->|StartRun / ResumeRun| Q[(Redis queue)]
+    Q --> W1[worker] & W2[worker ×N]
+    subgraph Worker[LangGraph lifecycle]
+      T[triage] --> I[investigation] --> A{{approval<br/>interrupt}} --> C[containment] --> R[report]
+    end
+    W1 --- Worker
+    Worker -->|tool guard| Providers[LLM · threat intel · identity · ticketing]
+    API & Worker --> PG[(PostgreSQL<br/>RLS · audit chain · checkpoints)]
+    Worker -. spans/metrics .-> Obs[OTel · Prometheus · Grafana]
+```
 
 ## Why this project exists
 
@@ -24,23 +74,25 @@ shows the opposite:
 | # | Workflow | Purpose |
 |---|---|---|
 | 1 | Ingestion & dedup | Normalise alerts, group duplicates into incidents |
-| 2 | Triage | Enrich (threat intel, user, asset), score severity, filter false positives |
-| 3 | Investigation | Timeline, MITRE ATT&CK mapping, related events (RAG) |
+| 2 | Triage | Enrich (threat intel, user), score severity, filter false positives |
+| 3 | Investigation | Timeline, MITRE ATT&CK mapping, related events |
 | 4 | Containment | Propose actions → policy check → human approval → execute |
-| 5 | Report | Post-incident report with root cause and lessons learned |
+| 5 | Report | Post-incident report built from verified audit facts |
 | 6 | Access review | Scheduled scan for dormant / over-privileged accounts |
 
 All external systems (SIEM, threat intel, identity provider, ticketing, LLM) are
-**pluggable providers**. Phase 1 ships with mock providers fed by a synthetic
-attack simulator, so the whole system runs locally for free.
+**pluggable providers** chosen by configuration. Mock providers fed by a synthetic attack
+simulator (8 scenarios) let the whole system run locally for free.
 
 ## Getting started
 
 ```bash
 uv sync                                   # install (Python 3.12+)
-uv run pytest                             # run the tests
+uv run pytest -m "not e2e"                # run the tests (in-memory backends)
 uv run ruff check . && uv run pyright     # lint + strict type check
 uv run lint-imports                       # enforce the layer rules
+# optional: also run the contract tests against real backends
+TEST_DATABASE_URL=postgresql://... TEST_REDIS_URL=redis://localhost/15 uv run pytest -m "not e2e"
 ```
 
 ### Run the demo (offline, free)
@@ -61,8 +113,9 @@ is closed or triaged **low**. Then, as approvers:
 
 1. Token for `incident-commander` → `GET /v1/approvals` → approve `disable_user`.
 2. Token for `soc-analyst-l2` → approve `block_ip` (an L2 cannot approve the high-impact one).
-3. The worker resumes the paused LangGraph run and the incident becomes **contained**;
-   `GET /v1/audit/verify` (as `auditor`) proves the whole trail is untampered.
+3. The worker resumes the paused LangGraph run, executes both actions and **closes** the
+   incident; `GET /v1/incidents/{id}/report` shows the report and `GET /v1/audit/verify`
+   (as `auditor`) proves the whole trail is untampered.
 
 To keep incidents, approvals, the audit chain and paused runs across restarts, use
 PostgreSQL (tables are created at start-up):
@@ -138,11 +191,13 @@ Choose an LLM for real verdicts:
 | [Benchmarks](docs/benchmarks.md) | Measured API latency and worker throughput (1 → 4 workers) |
 | [ADRs](docs/adr/README.md) | Architecture decision records |
 
-## Tech stack (planned)
+## Tech stack
 
-Python 3.12 · uv · LangGraph · LangChain · FastAPI · Pydantic · PostgreSQL · Redis Streams ·
-PyJWT → Keycloak · in-code policy engine → OPA · Ollama / Claude Haiku · pytest · ruff · pyright ·
-import-linter · Docker Compose → Kubernetes · OpenTelemetry · Langfuse · Prometheus · Grafana
+Python 3.12 · uv · LangGraph · LangChain · FastAPI · Pydantic · PostgreSQL (psycopg 3, RLS,
+LangGraph checkpointer) · Redis · PyJWT (HS256 dev / RS256 OIDC) · Keycloak · OPA/Rego ·
+Ollama / Claude Haiku · structlog · OpenTelemetry · Prometheus · Grafana · Streamlit ·
+Docker Compose · Helm/Kubernetes (HPA, KEDA) · pytest · hypothesis · Locust · ruff · pyright ·
+import-linter
 
 ## Engineering principles (short version)
 
