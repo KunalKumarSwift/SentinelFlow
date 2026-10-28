@@ -123,9 +123,9 @@ Each rule is one small pure function in `domain/` with its own test file.
 
 | Function | Rule |
 |---|---|
-| `fingerprint_alert(alert) -> str` | SHA-256 of `tenant_id, rule_id, sorted entity values` |
-| `is_duplicate(fp, seen, window, now) -> bool` | Same fingerprint seen within the window (default 15 min) |
-| `score_severity(rule_id, enrichment) -> Severity` | Table below |
+| `fingerprint_alert(alert) -> str` | SHA-256 of canonical JSON: `tenant_id, rule_id, sorted present entities` |
+| `is_duplicate(last_seen, observed_at, window) -> bool` | Same fingerprint seen within the window (default 15 min), either order |
+| `score_severity(rule_id, entities, enrichment) -> Severity` | Rules below (`domain/scoring.py`, table in `scoring_table.py`) |
 | `apply_verdict(incident, result) -> Incident` | Returns a new incident with status `TRIAGED` or `CLOSED` |
 | `approval_requirement(kind, severity)` | Catalogue above |
 | `record_decision(approval, decision) -> Approval` | Appends a decision; computes the new status |
@@ -134,10 +134,12 @@ Each rule is one small pure function in `domain/` with its own test file.
 ### Severity scoring
 
 ```
-base      = RULE_BASE_SEVERITY[rule_id]                # e.g. brute_force_success → HIGH
+base      = RULE_BASE_SEVERITY[rule_id]                # e.g. brute_force_success → MEDIUM
 +1 level  if ip_reputation.score >= 80
 +1 level  if user.is_privileged
--1 level  if ip is internal and user is not privileged
+-1 level  if entities.ip is in INTERNAL_NETWORKS (RFC 1918, loopback, link-local, ULA)
+          and the user is not privileged — NOT ipaddress.is_private, which also
+          matches documentation ranges such as 203.0.113.0/24
 clamped to [INFO, CRITICAL]
 ```
 

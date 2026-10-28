@@ -79,7 +79,7 @@ flowchart LR
 | `scan_for_injection` | pure | Runs the injection detector over `alert.raw`; sets `injection_suspected` |
 | `lookup_ip / user / asset` | provider | Parallel enrichment through `Send`; each tolerant of `None` entities |
 | `merge_enrichment` | pure | Combines partial results (state reducer) |
-| `score_severity` | pure | Calls `domain.severity.score_severity` |
+| `score_severity` | pure | Calls `domain.scoring.score_severity` |
 | `classify_with_llm` | LLM | Structured output `TriageClassification(verdict, rationale)`; PII redacted first |
 | `validate_verdict` | pure | If LLM output is invalid or injection suspected → `NEEDS_REVIEW` (fail safe, not fail open) |
 
