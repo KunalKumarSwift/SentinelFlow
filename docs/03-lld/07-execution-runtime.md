@@ -5,7 +5,11 @@
 **Phase 1 (built):** `contracts/run_queue.py` defines `StartRun(run_id, tenant_id, workflow,
 incident_id, alert_id, initiator)` and `Delivery(id, command, attempt)` as frozen dataclasses;
 `MemoryRunQueue` redelivers unacked messages after a visibility timeout measured with the
-injected `Clock`. Phase 3 serialises commands for Redis as the versioned Pydantic models below:
+injected `Clock`. **Phase 3 (built):** `RedisRunQueue` (ADR 0008) passes the same
+contract tests; `providers/queue/command_codec.py` serialises commands as JSON tagged
+`{"type": "start" | "resume", ...}` and validates every field on decode. `QUEUE_BACKEND=redis`
+selects it, so API processes and any number of workers share one queue. The versioned
+Pydantic shape originally planned is kept below for reference:
 
 ```python
 class StartRun(BaseModel):

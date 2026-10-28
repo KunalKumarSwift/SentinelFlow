@@ -1,8 +1,8 @@
 """Storage for one process, bundled so wiring functions stay small.
 
 ``memory_stores`` keeps everything in the process; ``postgres_stores`` persists the
-repositories and LangGraph checkpoints so runs survive a restart. The queue and
-ticketing stay in memory in single-process mode (Redis arrives in Phase 3).
+repositories and LangGraph checkpoints so runs survive a restart. The run queue is
+chosen separately (``QUEUE_BACKEND``) and passed in.
 """
 
 from dataclasses import dataclass
@@ -14,9 +14,9 @@ from langgraph.checkpoint.memory import InMemorySaver
 from sentinelflow.contracts.approvals import ApprovalRepository
 from sentinelflow.contracts.audit_store import AuditStore
 from sentinelflow.contracts.repositories import AlertRepository, IncidentRepository
+from sentinelflow.contracts.run_queue import RunQueue
 from sentinelflow.contracts.runs import RunRepository
 from sentinelflow.core.clock import Clock
-from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
 from sentinelflow.providers.storage.memory_alerts import MemoryAlertRepository
 from sentinelflow.providers.storage.memory_approvals import MemoryApprovalRepository
 from sentinelflow.providers.storage.memory_audit import MemoryAuditStore
@@ -39,11 +39,11 @@ class Stores:
     audit: AuditStore
     checkpointer: BaseCheckpointSaver[str]
     ticketing: MemoryTicketing
-    queue: MemoryRunQueue
+    queue: RunQueue
 
 
-def memory_stores(clock: Clock) -> Stores:
-    """Return fresh in-memory stores."""
+def memory_stores(clock: Clock, queue: RunQueue) -> Stores:
+    """Return fresh in-memory stores around ``queue``."""
     return Stores(
         clock=clock,
         alerts=MemoryAlertRepository(),
@@ -53,5 +53,5 @@ def memory_stores(clock: Clock) -> Stores:
         audit=MemoryAuditStore(),
         checkpointer=InMemorySaver(),
         ticketing=MemoryTicketing(),
-        queue=MemoryRunQueue(clock, VISIBILITY_TIMEOUT),
+        queue=queue,
     )

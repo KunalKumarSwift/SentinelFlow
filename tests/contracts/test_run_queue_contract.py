@@ -1,18 +1,24 @@
-"""Contract every RunQueue implementation must satisfy (memory now, Redis in Phase 3)."""
+"""Contract every RunQueue implementation must satisfy (memory and Redis)."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
 
-from sentinelflow.contracts.run_queue import RunQueue, StartRun
+from sentinelflow.contracts.run_queue import Delivery, RunQueue, StartRun
 from sentinelflow.providers.queue.memory_queue import MemoryRunQueue
+from sentinelflow.providers.queue.redis_queue import RedisRunQueue
 from tests.builders import T0
+from tests.contracts.redis_backend import fresh_redis
 from tests.fakes.fake_clock import FakeClock
 
 TIMEOUT = timedelta(seconds=60)
 Factory = Callable[[FakeClock], RunQueue]
-IMPLEMENTATIONS: list[Factory] = [lambda clock: MemoryRunQueue(clock, TIMEOUT)]
+IMPLEMENTATIONS: list[Factory] = [
+    lambda clock: MemoryRunQueue(clock, TIMEOUT),
+    lambda clock: RedisRunQueue(fresh_redis(), clock, TIMEOUT),
+]
 
 
 def _cmd(n: int = 1) -> StartRun:
@@ -68,3 +74,23 @@ def test_dead_lettered_delivery_is_kept_aside(queue: RunQueue, clock: FakeClock)
     clock.advance(TIMEOUT * 2)
     assert queue.claim("w1", max_items=1) == []
     assert [(d.command, reason) for d, reason in queue.dead_letters()] == [(_cmd(), "poison")]
+
+
+def test_claims_are_oldest_first(queue: RunQueue) -> None:
+    for n in range(12):
+        queue.publish(_cmd(n))
+    claimed = [d.command for d in queue.claim("w1", max_items=12)]
+    assert claimed == [_cmd(n) for n in range(12)]
+
+
+def test_concurrent_consumers_never_share_a_delivery(queue: RunQueue) -> None:
+    for n in range(30):
+        queue.publish(_cmd(n))
+
+    def claim(worker: int) -> Sequence[Delivery]:
+        return queue.claim(f"w{worker}", max_items=3)
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        batches = list(pool.map(claim, range(12)))
+    ids = [d.id for batch in batches for d in batch]
+    assert len(ids) == len(set(ids)) == 30
