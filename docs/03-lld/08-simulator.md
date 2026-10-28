@@ -21,7 +21,11 @@ the outcome matches.
 ## 2. Scenarios
 
 One module per scenario in `simulator/scenarios/`, each exposing
-`generate(rng: Random, clock: Clock, tenant: str) -> ScenarioOutput`.
+`generate(ctx: ScenarioContext) -> ScenarioOutput`. `ScenarioContext` bundles the injected
+`rng: Random`, `clock: Clock`, `ids: IdFactory` and `tenant_id`.
+
+Every scenario's `seed_data` must score to its own `expected.severity` through
+`domain.scoring.score_severity`; a test enforces this for every registered scenario.
 
 | Module | Alerts | Events | Expected |
 |---|---|---|---|
@@ -32,15 +36,16 @@ One module per scenario in `simulator/scenarios/`, each exposing
 | `powershell.py` | `suspicious_process` | Encoded PowerShell + outbound connection | HIGH, TP, `ISOLATE_HOST` |
 | `exfiltration.py` | `large_download` | 10 GB download at 03:00 local | HIGH, TP, no action → ESCALATED |
 | `prompt_injection.py` | `brute_force_success` | Same as brute force, `raw.user_agent` contains injection text | `injection_suspected`, NEEDS_REVIEW |
-| `benign.py` | `impossible_travel` | Login via corporate VPN egress | LOW, FALSE_POSITIVE, closed |
+| `benign_travel.py` | `impossible_travel` | Two logins via corporate VPN egress (10.8.0.0/24), different geo countries | LOW, FALSE_POSITIVE, closed |
 
 ## 3. Building blocks (small, shared)
 
 | Module | Provides |
 |---|---|
-| `simulator/factories.py` | `make_user`, `make_ip(kind="external"|"internal"|"malicious")`, `make_host` |
-| `simulator/geo.py` | Small static table of cities with coordinates; `distance_km(a, b)` |
-| `simulator/timeline.py` | `spread(start, count, every)` → timestamps |
+| `simulator/context.py` | `ScenarioContext` (rng, clock, ids, tenant) |
+| `simulator/output.py` | `ScenarioOutput`, `SeedData` (with `enrichment_for(entities)`), `Expectation` |
+| `simulator/factories.py` | `pick_user`, `external_ip` (TEST-NET-3), `vpn_egress_ip`, `spread(start, count, every)` |
+| `simulator/geo.py` (later) | Small static table of cities with coordinates; `distance_km(a, b)` |
 | `simulator/registry.py` | `SCENARIOS: Mapping[str, ScenarioFn]` |
 | `simulator/sinks.py` | `HttpSink` (POST to API), `JsonlSink` (write files), `MemorySink` (tests) |
 | `simulator/cli.py` | Command-line entry |
