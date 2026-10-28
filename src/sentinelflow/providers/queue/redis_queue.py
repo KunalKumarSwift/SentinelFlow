@@ -67,6 +67,10 @@ class RedisRunQueue:
         self._r.rpush(self._k["dlq"], json.dumps(entry))
         self._forget(delivery.id)
 
+    def depth(self) -> int:
+        """Return how many messages are queued or in flight (the scaling signal)."""
+        return self._r.zcard(self._k["visible"])
+
     def dead_letters(self) -> Sequence[tuple[Delivery, str]]:
         """Return dead-lettered messages with reasons, oldest first."""
         entries = cast(list[str], self._r.lrange(self._k["dlq"], 0, -1))

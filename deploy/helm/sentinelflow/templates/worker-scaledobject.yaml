@@ -1,0 +1,20 @@
+{{- if .Values.worker.keda.enabled }}
+# KEDA scales workers on queued + in-flight commands (requires KEDA installed).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "sentinelflow.fullname" . }}-worker
+  labels:
+    {{- include "sentinelflow.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "sentinelflow.fullname" . }}-worker
+  minReplicaCount: {{ .Values.worker.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.worker.keda.maxReplicas }}
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: {{ .Values.worker.keda.prometheusAddress }}
+        query: {{ .Values.worker.keda.query | quote }}
+        threshold: {{ .Values.worker.keda.threshold | quote }}
+{{- end }}

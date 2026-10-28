@@ -127,9 +127,18 @@ investigation → playbook defaults, report → verified facts only). Budgets li
 | Load | Scale action |
 |---|---|
 | More alerts/s | More API replicas (stateless); dedup cache in Redis |
-| Longer queue | More workers (KEDA on the size of `sf:runs:visible`) |
+| Longer queue | More workers (KEDA Prometheus scaler on `sentinelflow_queue_messages`) |
 | Slow LLM | More workers (I/O bound); async providers in Phase 3 |
 | Hot tenant | Per-tenant rate limit and budget isolate noisy neighbours |
+
+**Kubernetes (built, slice 4.5):** `deploy/helm/sentinelflow` deploys the API (HPA on CPU,
+min 2, PodDisruptionBudget), workers (fixed replicas, or a KEDA `ScaledObject` on
+`max(sentinelflow_queue_messages)`, a gauge of queued + in-flight commands that every
+process exports via `RunQueue.depth()`; KEDA's own Redis scaler cannot read our sorted-set
+queue), and the access review as a `CronJob`. Pods run as non-root with a read-only root
+filesystem, all capabilities dropped and no service-account token. Secrets come from an
+existing `Secret`, never from values. CI runs `helm lint --strict` and renders the chart
+with and without KEDA.
 
 Target for the load test (Phase 3): 1 000 alerts in 60 s with 4 workers and `FakeLLM`
 (measures platform overhead, not LLM latency), then a smaller run with Ollama.

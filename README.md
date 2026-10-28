@@ -83,6 +83,17 @@ The API process only serves HTTP (`RUN_WORKER_IN_API=false`); `sentinelflow-work
 processes share the work through Redis and resume each other's paused runs from
 PostgreSQL checkpoints.
 
+### Deploy to Kubernetes (Helm)
+
+```bash
+kubectl create secret generic sentinelflow-secrets \
+  --from-literal=JWT_SECRET=... --from-literal=DATABASE_URL=postgresql://...
+helm install sf deploy/helm/sentinelflow --set worker.keda.enabled=true
+```
+
+API behind an HPA, workers scaled by KEDA on queue depth, and the access review as a
+daily CronJob. Pods are non-root with read-only filesystems.
+
 ### Sign in with Keycloak (OIDC) instead of dev tokens
 
 ```bash

@@ -64,6 +64,11 @@ class MemoryRunQueue:
             self._entries.pop(delivery.id, None)
             self._dead.append((delivery, reason))
 
+    def depth(self) -> int:
+        """Return how many messages are queued or in flight."""
+        with self._lock:
+            return len(self._entries)
+
     def dead_letters(self) -> Sequence[tuple[Delivery, str]]:
         """Return dead-lettered messages with reasons, oldest first."""
         return list(self._dead)

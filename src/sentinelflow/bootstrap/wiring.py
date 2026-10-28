@@ -50,6 +50,7 @@ def build_runtime(settings: Settings, demo_seed: int = 42) -> Runtime:
     _require_supported_backends(settings)
     metrics = PrometheusMetrics(CollectorRegistry())
     stores = _stores(settings, metrics)
+    metrics.track_queue_depth(stores.queue.depth)
     redactor = Redactor(_derive_key(settings.jwt_secret.get_secret_value(), "pii"))
     tracer = make_tracer(settings)
     llm = _budgeted_llm(settings, stores, metrics)

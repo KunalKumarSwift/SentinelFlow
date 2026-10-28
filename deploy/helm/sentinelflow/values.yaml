@@ -1,0 +1,66 @@
+# Default values for SentinelFlow. PostgreSQL, Redis (and optionally Keycloak, OPA,
+# Ollama) are expected to exist already; point the config below at them.
+
+image:
+  repository: ghcr.io/kunalkumarswift/sentinelflow
+  tag: ""            # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+
+# Non-secret settings, passed as environment variables (see core/config.py).
+config:
+  APP_ENV: prod
+  STORAGE_BACKEND: postgres
+  QUEUE_BACKEND: redis
+  REDIS_URL: redis://redis:6379/0
+  LLM_BACKEND: none
+  AUTH_MODE: oidc
+  OIDC_ISSUER: https://keycloak.example.com/realms/sentinelflow
+  POLICY_ENGINE: incode
+  LOG_FORMAT: json
+  ACCESS_REVIEW_TENANTS: acme
+
+# Secret with JWT_SECRET, DATABASE_URL (and ANTHROPIC_API_KEY if used). Not created by
+# the chart, so secrets never live in values files or Helm release history.
+existingSecret: sentinelflow-secrets
+
+api:
+  replicas: 2
+  port: 8000
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  replicas: 2          # used when KEDA is disabled
+  metricsPort: 9100
+  terminationGracePeriodSeconds: 45   # > one batch, so SIGTERM never abandons work
+  resources:
+    requests: { cpu: 250m, memory: 384Mi }
+    limits: { cpu: "1", memory: 768Mi }
+  keda:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 20
+    # Scale on queued + in-flight commands exported by the API (/metrics).
+    prometheusAddress: http://prometheus-server.monitoring:80
+    query: max(sentinelflow_queue_messages)
+    threshold: "20"
+
+accessReview:
+  enabled: true
+  schedule: "17 3 * * *"   # daily, off the hour
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  seccompProfile: { type: RuntimeDefault }
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
